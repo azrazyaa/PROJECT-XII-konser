@@ -1,0 +1,9 @@
+# Dependencies
+/node_modules
+
+# Next.js build
+/.next/
+
+# Environment Variables (Sangat penting agar .env.local tidak ter-push!)
+.env*.local
+.env
