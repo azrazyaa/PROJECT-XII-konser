@@ -686,7 +686,7 @@ export default function ScannerPage() {
                 </div>
               )}
 
-              {/* START / STOP */}
+              {/* STARTt / STOP */}
 
               {!scanning ? (
                 <button
