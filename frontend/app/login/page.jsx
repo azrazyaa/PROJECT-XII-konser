@@ -34,14 +34,20 @@ export default function LoginPage() {
 
       if (response.ok && data.success) {
         alert(data.message);
-        console.log(data);
 
-        // localStorage.setItem("token", data.data.token);
+        // Simpan token login
+        localStorage.setItem("token", data.data.token);
+
+        // Simpan data user jika nanti dibutuhkan
+        localStorage.setItem("user", JSON.stringify(data.data.user));
+
+        // Masuk ke halaman admin
+        window.location.href = "/admin";
       } else {
-        alert(data.message);
+        alert(data.message || "Login gagal");
       }
     } catch (error) {
-      console.error(error);
+      console.error("Login error:", error);
       alert("Gagal terhubung ke server");
     } finally {
       setLoading(false);
