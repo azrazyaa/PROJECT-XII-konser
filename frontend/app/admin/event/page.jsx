@@ -6,13 +6,16 @@ import Link from "next/link";
 import {
   Bell,
   BarChart3,
+  Calendar,
   Check,
   ChevronDown,
   Edit3,
   Eye,
   EyeOff,
   Inbox,
+  Info,
   LayoutDashboard,
+  MapPin,
   Menu,
   Mic2,
   Plus,
@@ -209,6 +212,18 @@ function Topbar({ setOpen }) {
 }
 
 // ============================================================
+// ARTISTS DATA (Matching MySQL Database)
+// ============================================================
+
+const availableArtists = [
+  { id: 1, name: "Aurora Velez", genre: "Electronic / Synthwave" },
+  { id: 2, name: "Kai Matsumoto", genre: "J-Rock / Alternative" },
+  { id: 3, name: "Luna De Santos", genre: "Latin Pop / Reggaeton" },
+  { id: 4, name: "The Voidwalkers", genre: "Progressive Metal" },
+  { id: 5, name: "Zara Noor", genre: "R&B / Soul" },
+];
+
+// ============================================================
 // MAIN EVENT PAGE
 // ============================================================
 
@@ -220,15 +235,18 @@ export default function EventPage() {
   const [filter, setFilter] = useState("All");
   const [showModal, setShowModal] = useState(false);
   const [editingEvent, setEditingEvent] = useState(null);
+  const [detailEvent, setDetailEvent] = useState(null);
+  const [showDetailModal, setShowDetailModal] = useState(false);
   const [submitting, setSubmitting] = useState(false);
 
   const [form, setForm] = useState({
     title: "",
     venue: "",
     event_date: "",
-    artist_id: "",
+    artist_id: "1",
     description: "",
     banner_url: "",
+    is_closed: 0,
   });
 
   // ============================================================
@@ -314,18 +332,23 @@ export default function EventPage() {
     try {
       const token = getToken();
 
+      if (!token) {
+        alert("Sesi login tidak ditemukan. Silakan login sebagai admin terlebih dahulu.");
+        return false;
+      }
+
       const response = await fetch("/api/events", {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
-          ...(token ? { Authorization: `Bearer ${token}` } : {}),
+          Authorization: `Bearer ${token}`,
         },
         body: JSON.stringify(formData),
       });
 
       const data = await response.json();
 
-      if (data.success) {
+      if (response.ok && data.success) {
         alert("Event berhasil ditambahkan!");
         fetchEvents();
         return true;
@@ -335,7 +358,7 @@ export default function EventPage() {
       }
     } catch (error) {
       console.error("Error:", error);
-      alert("Terjadi kesalahan");
+      alert("Terjadi kesalahan saat menambah event");
       return false;
     }
   };
@@ -348,18 +371,23 @@ export default function EventPage() {
     try {
       const token = getToken();
 
+      if (!token) {
+        alert("Sesi login tidak ditemukan. Silakan login sebagai admin terlebih dahulu.");
+        return false;
+      }
+
       const response = await fetch(`/api/events/${id}`, {
         method: "PUT",
         headers: {
           "Content-Type": "application/json",
-          ...(token ? { Authorization: `Bearer ${token}` } : {}),
+          Authorization: `Bearer ${token}`,
         },
         body: JSON.stringify(formData),
       });
 
       const data = await response.json();
 
-      if (data.success) {
+      if (response.ok && data.success) {
         alert("Event berhasil diupdate!");
         fetchEvents();
         return true;
@@ -369,7 +397,7 @@ export default function EventPage() {
       }
     } catch (error) {
       console.error("Error:", error);
-      alert("Terjadi kesalahan");
+      alert("Terjadi kesalahan saat mengupdate event");
       return false;
     }
   };
@@ -384,17 +412,22 @@ export default function EventPage() {
     try {
       const token = getToken();
 
+      if (!token) {
+        alert("Sesi login tidak ditemukan. Silakan login sebagai admin terlebih dahulu.");
+        return;
+      }
+
       const response = await fetch(`/api/events/${id}`, {
         method: "DELETE",
         headers: {
           "Content-Type": "application/json",
-          ...(token ? { Authorization: `Bearer ${token}` } : {}),
+          Authorization: `Bearer ${token}`,
         },
       });
 
       const data = await response.json();
 
-      if (data.success) {
+      if (response.ok && data.success) {
         alert("Event berhasil dihapus!");
         fetchEvents();
       } else {
@@ -402,7 +435,7 @@ export default function EventPage() {
       }
     } catch (error) {
       console.error("Error:", error);
-      alert("Terjadi kesalahan");
+      alert("Terjadi kesalahan saat menghapus event");
     }
   };
 
@@ -410,23 +443,41 @@ export default function EventPage() {
   // 5. TOGGLE VISIBILITY (is_closed)
   // ============================================================
 
-  const toggleVisibility = async (id, currentIsClosed) => {
+  const toggleVisibility = async (event) => {
     try {
       const token = getToken();
-      const newIsClosed = currentIsClosed === 1 ? 0 : 1;
 
-      const response = await fetch(`/api/events/${id}`, {
+      if (!token) {
+        alert("Sesi login tidak ditemukan. Silakan login sebagai admin terlebih dahulu.");
+        return;
+      }
+
+      const newIsClosed = event.is_closed === 1 ? 0 : 1;
+      const foundArtist = availableArtists.find(
+        (a) => a.id === event.artist_id || a.name === event.artist_name
+      );
+      const artistId = foundArtist ? foundArtist.id : (event.artist_id || 1);
+
+      const response = await fetch(`/api/events/${event.id}`, {
         method: "PUT",
         headers: {
           "Content-Type": "application/json",
-          ...(token ? { Authorization: `Bearer ${token}` } : {}),
+          Authorization: `Bearer ${token}`,
         },
-        body: JSON.stringify({ is_closed: newIsClosed }),
+        body: JSON.stringify({
+          artist_id: artistId,
+          title: event.title,
+          description: event.description || "",
+          venue: event.venue,
+          event_date: event.event_date ? event.event_date.split("T")[0] : "",
+          banner_url: event.banner_url || "",
+          is_closed: newIsClosed,
+        }),
       });
 
       const data = await response.json();
 
-      if (data.success) {
+      if (response.ok && data.success) {
         fetchEvents();
       } else {
         alert(data.message || "Gagal update visibility");
@@ -444,8 +495,8 @@ export default function EventPage() {
   const saveEvent = async (e) => {
     e.preventDefault();
 
-    if (!form.title || !form.venue || !form.event_date) {
-      alert("Judul, venue, dan tanggal wajib diisi.");
+    if (!form.title || !form.venue || !form.event_date || !form.artist_id) {
+      alert("Judul, venue, tanggal konser, dan artis wajib diisi.");
       return;
     }
 
@@ -455,9 +506,10 @@ export default function EventPage() {
       title: form.title,
       venue: form.venue,
       event_date: form.event_date,
-      artist_id: form.artist_id || null,
+      artist_id: parseInt(form.artist_id, 10),
       description: form.description || "",
       banner_url: form.banner_url || "",
+      is_closed: Number(form.is_closed) || 0,
     };
 
     let success = false;
@@ -471,20 +523,35 @@ export default function EventPage() {
 
     if (success) {
       setShowModal(false);
+      setEditingEvent(null);
       setForm({
         title: "",
         venue: "",
         event_date: "",
-        artist_id: "",
+        artist_id: "1",
         description: "",
         banner_url: "",
+        is_closed: 0,
       });
     }
   };
 
   // ============================================================
-  // 7. OPEN MODAL
+  // 7. OPEN MODAL & DETAIL
   // ============================================================
+
+  // Helper konversi tanggal database ke format input input[type="date"] (YYYY-MM-DD)
+  const toInputDate = (dateStr) => {
+    if (!dateStr) return "";
+    const date = new Date(dateStr);
+    if (isNaN(date.getTime())) {
+      return String(dateStr).split("T")[0];
+    }
+    const year = date.getFullYear();
+    const month = String(date.getMonth() + 1).padStart(2, "0");
+    const day = String(date.getDate()).padStart(2, "0");
+    return `${year}-${month}-${day}`;
+  };
 
   const openAddModal = () => {
     setEditingEvent(null);
@@ -492,24 +559,38 @@ export default function EventPage() {
       title: "",
       venue: "",
       event_date: "",
-      artist_id: "",
+      artist_id: "1",
       description: "",
       banner_url: "",
+      is_closed: 0,
     });
     setShowModal(true);
   };
 
   const openEditModal = (event) => {
     setEditingEvent(event);
+    const foundArtist = availableArtists.find(
+      (a) => a.id === event.artist_id || a.name === event.artist_name
+    );
     setForm({
       title: event.title || "",
       venue: event.venue || "",
-      event_date: event.event_date ? event.event_date.split("T")[0] : "",
-      artist_id: event.artist_id || "",
+      event_date: toInputDate(event.event_date),
+      artist_id: foundArtist
+        ? String(foundArtist.id)
+        : event.artist_id
+        ? String(event.artist_id)
+        : "1",
       description: event.description || "",
       banner_url: event.banner_url || "",
+      is_closed: event.is_closed ?? 0,
     });
     setShowModal(true);
+  };
+
+  const openDetailModal = (event) => {
+    setDetailEvent(event);
+    setShowDetailModal(true);
   };
 
   // ============================================================
@@ -530,25 +611,27 @@ export default function EventPage() {
 
     if (filter !== "All") {
       const statusMap = {
-        Active: "upcoming",
-        Ongoing: "ongoing",
-        Completed: "completed",
-        Cancelled: "cancelled",
+        Active: 0,
+        Closed: 1,
       };
-      const statusValue = statusMap[filter];
-      if (statusValue) {
-        result = result.filter((event) => event.status === statusValue);
+      if (statusMap[filter] !== undefined) {
+        result = result.filter((event) => (event.is_closed ?? 0) === statusMap[filter]);
       }
     }
 
     return result;
   }, [events, search, filter]);
 
-  // Format tanggal
+  // Format tanggal untuk tampilan UI
   const formatDate = (dateStr) => {
     if (!dateStr) return "-";
     const date = new Date(dateStr);
-    return date.toISOString().split("T")[0];
+    if (isNaN(date.getTime())) return dateStr;
+    return date.toLocaleDateString("id-ID", {
+      day: "numeric",
+      month: "short",
+      year: "numeric",
+    });
   };
 
   // ============================================================
@@ -676,9 +759,13 @@ export default function EventPage() {
                             <Mic2 size={18} />
                           </div>
                           <div>
-                            <span className="text-[15px] font-semibold text-zinc-200">
+                            <button
+                              onClick={() => openDetailModal(event)}
+                              className="text-left text-[15px] font-semibold text-zinc-200 transition hover:text-purple-400"
+                              title="Lihat detail event"
+                            >
                               {event.title}
-                            </span>
+                            </button>
                             {event.artist_name && (
                               <p className="text-xs text-zinc-500">
                                 {event.artist_name}
@@ -699,30 +786,38 @@ export default function EventPage() {
 
                         <div>
                           {isActive ? (
-                            <span className="rounded-full bg-amber-950/50 px-3 py-1 text-xs font-semibold text-amber-500">
+                            <span className="rounded-full bg-amber-950/50 px-3 py-1 text-xs font-semibold text-amber-500 border border-amber-500/20">
                               Active
                             </span>
                           ) : (
-                            <span className="text-sm text-zinc-500">
-                              Completed
+                            <span className="rounded-full bg-zinc-800 px-3 py-1 text-xs font-semibold text-zinc-400">
+                              Closed
                             </span>
                           )}
                         </div>
 
-                        <div className="flex items-center gap-3">
+                        <div className="flex items-center gap-2">
+                          <button
+                            onClick={() => openDetailModal(event)}
+                            title="Lihat Detail Event"
+                            className="flex h-9 w-9 items-center justify-center rounded-lg bg-purple-950/40 text-purple-400 transition hover:bg-purple-900/60 hover:text-purple-200"
+                          >
+                            <Eye size={17} />
+                          </button>
+
                           <button
                             onClick={() => openEditModal(event)}
-                            title="Edit event"
-                            className="text-zinc-400 transition hover:text-purple-400"
+                            title="Edit Event"
+                            className="flex h-9 w-9 items-center justify-center rounded-lg bg-blue-950/40 text-blue-400 transition hover:bg-blue-900/60 hover:text-blue-200"
                           >
                             <Edit3 size={17} />
                           </button>
 
                           <button
                             onClick={() =>
-                              toggleVisibility(event.id, event.is_closed)
+                              toggleVisibility(event)
                             }
-                            title={isClosed ? "Show event" : "Hide event"}
+                            title={isClosed ? "Aktifkan Konser" : "Tutup / Sembunyikan Konser"}
                             className={`flex h-9 w-9 items-center justify-center rounded-lg transition ${
                               isClosed
                                 ? "bg-zinc-800 text-zinc-500 hover:text-zinc-300"
@@ -732,14 +827,14 @@ export default function EventPage() {
                             {isClosed ? (
                               <EyeOff size={16} />
                             ) : (
-                              <Eye size={16} />
+                              <Check size={16} />
                             )}
                           </button>
 
                           <button
                             onClick={() => hapusEvent(event.id, event.title)}
-                            title="Delete event"
-                            className="text-zinc-500 transition hover:text-red-400"
+                            title="Hapus Event"
+                            className="flex h-9 w-9 items-center justify-center rounded-lg bg-red-950/20 text-zinc-500 transition hover:bg-red-950/50 hover:text-red-400"
                           >
                             <Trash2 size={17} />
                           </button>
@@ -831,17 +926,23 @@ export default function EventPage() {
 
               <div>
                 <label className="mb-2 block text-sm font-medium text-zinc-400">
-                  Artist ID
+                  Artist <span className="text-red-400">*</span>
                 </label>
-                <input
-                  type="number"
+                <select
                   value={form.artist_id}
                   onChange={(e) =>
                     setForm({ ...form, artist_id: e.target.value })
                   }
-                  placeholder="e.g. 1"
-                  className="h-11 w-full rounded-xl border border-white/[0.06] bg-black/30 px-4 text-sm text-zinc-200 outline-none placeholder:text-zinc-600 focus:border-purple-500/50"
-                />
+                  className="h-11 w-full rounded-xl border border-white/[0.06] bg-[#141026] px-4 text-sm text-zinc-200 outline-none focus:border-purple-500/50"
+                  required
+                >
+                  <option value="" disabled>Select an Artist</option>
+                  {availableArtists.map((artist) => (
+                    <option key={artist.id} value={artist.id} className="bg-[#0d0b1c] text-zinc-200">
+                      {artist.name} ({artist.genre})
+                    </option>
+                  ))}
+                </select>
               </div>
 
               <div>
@@ -874,6 +975,28 @@ export default function EventPage() {
                 />
               </div>
 
+              {editingEvent && (
+                <div>
+                  <label className="mb-2 block text-sm font-medium text-zinc-400">
+                    Status Event
+                  </label>
+                  <select
+                    value={form.is_closed}
+                    onChange={(e) =>
+                      setForm({ ...form, is_closed: Number(e.target.value) })
+                    }
+                    className="h-11 w-full rounded-xl border border-white/[0.06] bg-[#141026] px-4 text-sm text-zinc-200 outline-none focus:border-purple-500/50"
+                  >
+                    <option value={0} className="bg-[#0d0b1c] text-zinc-200">
+                      Active (Konser Aktif / Dibuka)
+                    </option>
+                    <option value={1} className="bg-[#0d0b1c] text-zinc-200">
+                      Closed (Konser Selesai / Ditutup)
+                    </option>
+                  </select>
+                </div>
+              )}
+
               <div className="flex justify-end gap-3 pt-3">
                 <button
                   type="button"
@@ -894,6 +1017,140 @@ export default function EventPage() {
                 </button>
               </div>
             </form>
+          </div>
+        </div>
+      )}
+
+      {/* ============================================================
+          MODAL LIHAT DETAIL
+      ============================================================ */}
+
+      {showDetailModal && detailEvent && (
+        <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/75 px-5 backdrop-blur-sm">
+          <div className="w-full max-w-[580px] max-h-[90vh] overflow-y-auto rounded-2xl border border-purple-500/20 bg-[#0d0b1c] p-6 shadow-2xl shadow-black/80">
+            {/* Header */}
+            <div className="flex items-start justify-between border-b border-white/[0.08] pb-4">
+              <div>
+                <div className="flex items-center gap-3">
+                  <h2 className="text-xl font-bold text-zinc-100">
+                    {detailEvent.title}
+                  </h2>
+                  {detailEvent.is_closed === 1 ? (
+                    <span className="rounded-full bg-zinc-800 px-3 py-0.5 text-xs font-semibold text-zinc-400">
+                      Closed
+                    </span>
+                  ) : (
+                    <span className="rounded-full bg-amber-950/60 border border-amber-500/30 px-3 py-0.5 text-xs font-semibold text-amber-400">
+                      Active
+                    </span>
+                  )}
+                </div>
+                <p className="mt-1 text-xs text-zinc-500">
+                  ID Konser: #{detailEvent.id}
+                </p>
+              </div>
+
+              <button
+                onClick={() => setShowDetailModal(false)}
+                className="text-zinc-500 transition hover:text-zinc-200"
+              >
+                <X size={20} />
+              </button>
+            </div>
+
+            {/* Banner Image Preview */}
+            {detailEvent.banner_url ? (
+              <div className="mt-4 h-48 w-full overflow-hidden rounded-xl border border-white/[0.06] bg-black/50">
+                <img
+                  src={detailEvent.banner_url}
+                  alt={detailEvent.title}
+                  className="h-full w-full object-cover"
+                  onError={(e) => {
+                    e.currentTarget.parentElement.style.display = "none";
+                  }}
+                />
+              </div>
+            ) : null}
+
+            {/* Info Grid */}
+            <div className="mt-5 space-y-4">
+              {/* Artist Info */}
+              <div className="flex items-center gap-4 rounded-xl border border-white/[0.05] bg-white/[0.02] p-4">
+                <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-xl bg-purple-950/70 text-purple-400">
+                  <Mic2 size={22} />
+                </div>
+                <div>
+                  <div className="text-xs font-medium text-zinc-500 uppercase tracking-wider">
+                    Artis / Performer
+                  </div>
+                  <div className="text-base font-bold text-zinc-100">
+                    {detailEvent.artist_name || "Tidak ada data artist"}
+                  </div>
+                  {detailEvent.artist_genre && (
+                    <span className="text-xs text-purple-400">
+                      Genre: {detailEvent.artist_genre}
+                    </span>
+                  )}
+                </div>
+              </div>
+
+              {/* Venue & Date */}
+              <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+                <div className="rounded-xl border border-white/[0.05] bg-white/[0.02] p-4">
+                  <div className="flex items-center gap-2 text-xs font-medium text-zinc-500 uppercase tracking-wider">
+                    <MapPin size={14} className="text-purple-400" />
+                    Lokasi / Venue
+                  </div>
+                  <div className="mt-1.5 text-sm font-semibold text-zinc-200">
+                    {detailEvent.venue}
+                  </div>
+                </div>
+
+                <div className="rounded-xl border border-white/[0.05] bg-white/[0.02] p-4">
+                  <div className="flex items-center gap-2 text-xs font-medium text-zinc-500 uppercase tracking-wider">
+                    <Calendar size={14} className="text-purple-400" />
+                    Tanggal Konser
+                  </div>
+                  <div className="mt-1.5 text-sm font-semibold text-zinc-200">
+                    {formatDate(detailEvent.event_date)}
+                  </div>
+                </div>
+              </div>
+
+              {/* Description */}
+              <div className="rounded-xl border border-white/[0.05] bg-white/[0.02] p-4">
+                <div className="flex items-center gap-2 text-xs font-medium text-zinc-500 uppercase tracking-wider">
+                  <Info size={14} className="text-purple-400" />
+                  Deskripsi Konser
+                </div>
+                <p className="mt-2 text-sm text-zinc-300 leading-relaxed whitespace-pre-wrap">
+                  {detailEvent.description || "Tidak ada deskripsi yang disediakan."}
+                </p>
+              </div>
+            </div>
+
+            {/* Modal Actions */}
+            <div className="mt-6 flex justify-end gap-3 border-t border-white/[0.08] pt-4">
+              <button
+                type="button"
+                onClick={() => setShowDetailModal(false)}
+                className="rounded-xl border border-white/[0.08] px-5 py-2.5 text-sm font-semibold text-zinc-400 transition hover:bg-white/[0.04] hover:text-zinc-200"
+              >
+                Tutup
+              </button>
+
+              <button
+                type="button"
+                onClick={() => {
+                  setShowDetailModal(false);
+                  openEditModal(detailEvent);
+                }}
+                className="flex items-center gap-2 rounded-xl bg-gradient-to-r from-purple-700 to-violet-800 px-5 py-2.5 text-sm font-bold text-white transition hover:from-purple-600 hover:to-violet-700"
+              >
+                <Edit3 size={16} />
+                Edit Event Ini
+              </button>
+            </div>
           </div>
         </div>
       )}

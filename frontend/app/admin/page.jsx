@@ -473,13 +473,13 @@ export default function AdminPage() {
                 </p>
               </div>
 
-              <button
-                onClick={() => alert("New Event form belum dibuat.")}
+              <Link
+                href="/admin/event"
                 className="flex w-fit items-center gap-2 rounded-lg bg-gradient-to-r from-purple-700 to-violet-800 px-5 py-3 text-sm font-bold text-white shadow-lg shadow-purple-950/30 transition hover:from-purple-600 hover:to-violet-700"
               >
                 <Plus size={18} />
                 New Event
-              </button>
+              </Link>
             </div>
 
             <EventCard />
