@@ -286,6 +286,9 @@ export default function ScannerPage() {
 
   const scanIntervalRef = useRef(null);
 
+  /* Canvas tersembunyi untuk flip frame sebelum di-detect */
+  const canvasRef = useRef(null);
+
   /* =======================================================
      VERIFY TICKET
   ======================================================= */
@@ -441,7 +444,25 @@ export default function ScannerPage() {
               if (videoRef.current.videoWidth === 0) return;
 
               try {
-                const barcodes = await detector.detect(videoRef.current);
+                /* Gambar frame ke canvas dengan flip horizontal,
+                   supaya QR terbaca benar meski video di-flip CSS */
+                const canvas = canvasRef.current;
+                if (!canvas) return;
+
+                const vw = videoRef.current.videoWidth;
+                const vh = videoRef.current.videoHeight;
+
+                canvas.width = vw;
+                canvas.height = vh;
+
+                const ctx = canvas.getContext("2d");
+                ctx.save();
+                ctx.translate(vw, 0);
+                ctx.scale(-1, 1);
+                ctx.drawImage(videoRef.current, 0, 0, vw, vh);
+                ctx.restore();
+
+                const barcodes = await detector.detect(canvas);
 
                 if (barcodes.length > 0) {
                   const value = barcodes[0].rawValue;
@@ -596,10 +617,14 @@ export default function ScannerPage() {
                   autoPlay
                   playsInline
                   muted
+                  style={{ transform: "scaleX(-1)" }}
                   className={`absolute inset-0 h-full w-full object-cover transition-opacity duration-300 ${
                     scanning ? "opacity-100" : "opacity-0"
                   }`}
                 />
+
+                {/* Canvas tersembunyi untuk flip frame QR detection */}
+                <canvas ref={canvasRef} className="hidden" />
 
                 {/* DARK BACKGROUND WHEN CAMERA OFF */}
 
@@ -665,9 +690,26 @@ export default function ScannerPage() {
 
                 {scanning && (
                   <>
-                    {/* SCAN LINE */}
+                    {/* ANIMATED SCAN LINE */}
 
-                    <div className="absolute left-8 right-8 top-1/2 h-[2px] animate-pulse bg-purple-500/80 shadow-[0_0_20px_rgba(168,85,247,0.8)]" />
+                    <style>{`
+                      @keyframes scanline {
+                        0%   { top: 8%; }
+                        50%  { top: 86%; }
+                        100% { top: 8%; }
+                      }
+                      .scan-line-animated {
+                        animation: scanline 2s ease-in-out infinite;
+                        position: absolute;
+                        left: 2rem;
+                        right: 2rem;
+                        height: 2px;
+                        background: linear-gradient(to right, transparent, rgba(168,85,247,0.95), transparent);
+                        box-shadow: 0 0 18px 3px rgba(168,85,247,0.7);
+                      }
+                    `}</style>
+
+                    <div className="scan-line-animated" />
 
                     {/* STATUS */}
 

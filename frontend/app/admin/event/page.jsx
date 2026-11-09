@@ -403,12 +403,10 @@ export default function EventPage() {
   };
 
   // ============================================================
-  // 4. HAPUS EVENT (DELETE)
+  // 4. HAPUS EVENT (SOFT DELETE -> CANCELLED / HARD DELETE)
   // ============================================================
 
-  const hapusEvent = async (id, name) => {
-    if (!confirm(`Yakin hapus event "${name}"?`)) return;
-
+  const hapusEvent = async (event) => {
     try {
       const token = getToken();
 
@@ -417,25 +415,68 @@ export default function EventPage() {
         return;
       }
 
-      const response = await fetch(`/api/events/${id}`, {
-        method: "DELETE",
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: `Bearer ${token}`,
-        },
-      });
+      // Jika event sudah berstatus Cancelled (is_closed === 2), tawarkan opsi hapus permanen
+      if (event.is_closed === 2) {
+        if (!confirm(`Event "${event.title}" sudah berstatus Cancelled. Apakah Anda ingin menghapusnya secara PERMANEN dari database?`)) {
+          return;
+        }
 
-      const data = await response.json();
+        const response = await fetch(`/api/events/${event.id}`, {
+          method: "DELETE",
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${token}`,
+          },
+        });
 
-      if (response.ok && data.success) {
-        alert("Event berhasil dihapus!");
-        fetchEvents();
+        const data = await response.json();
+
+        if (response.ok && data.success) {
+          alert("Event berhasil dihapus secara permanen!");
+          fetchEvents();
+        } else {
+          alert(data.message || "Gagal hapus event");
+        }
       } else {
-        alert(data.message || "Gagal hapus event");
+        // Soft delete: tandai event sebagai Cancelled (is_closed: 2)
+        if (!confirm(`Yakin ingin membatalkan/menghapus event "${event.title}"? Event akan dipindahkan ke status Cancelled.`)) {
+          return;
+        }
+
+        const foundArtist = availableArtists.find(
+          (a) => a.id === event.artist_id || a.name === event.artist_name
+        );
+        const artistId = foundArtist ? foundArtist.id : (event.artist_id || 1);
+
+        const response = await fetch(`/api/events/${event.id}`, {
+          method: "PUT",
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${token}`,
+          },
+          body: JSON.stringify({
+            artist_id: artistId,
+            title: event.title,
+            description: event.description || "",
+            venue: event.venue,
+            event_date: event.event_date ? event.event_date.split("T")[0] : "",
+            banner_url: event.banner_url || "",
+            is_closed: 2, // 2 = Cancelled
+          }),
+        });
+
+        const data = await response.json();
+
+        if (response.ok && data.success) {
+          alert(`Event "${event.title}" berhasil dibatalkan dan dipindahkan ke status Cancelled!`);
+          fetchEvents();
+        } else {
+          alert(data.message || "Gagal membatalkan event");
+        }
       }
     } catch (error) {
       console.error("Error:", error);
-      alert("Terjadi kesalahan saat menghapus event");
+      alert("Terjadi kesalahan saat memproses penghapusan event");
     }
   };
 
@@ -452,7 +493,8 @@ export default function EventPage() {
         return;
       }
 
-      const newIsClosed = event.is_closed === 1 ? 0 : 1;
+      // Jika sedang ditutup (1) atau dibatalkan (2), aktifkan kembali (0). Jika aktif (0), tutup (1).
+      const newIsClosed = (event.is_closed === 1 || event.is_closed === 2) ? 0 : 1;
       const foundArtist = availableArtists.find(
         (a) => a.id === event.artist_id || a.name === event.artist_name
       );
@@ -594,29 +636,86 @@ export default function EventPage() {
   };
 
   // ============================================================
-  // 8. FILTER + SEARCH
+  // 8. FILTER + SEARCH & STATUS HELPER
   // ============================================================
+
+  // Helper untuk mengecek apakah tanggal konser sudah selesai (lewat dari hari ini)
+  const isEventPast = (dateStr) => {
+    if (!dateStr) return false;
+    const eventDate = new Date(dateStr);
+    if (isNaN(eventDate.getTime())) return false;
+    const now = new Date();
+    const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+    const concertDay = new Date(
+      eventDate.getFullYear(),
+      eventDate.getMonth(),
+      eventDate.getDate()
+    );
+    return concertDay < today;
+  };
+
+  // Helper untuk menentukan status konser secara dinamis
+  const getEventStatus = (event) => {
+    // 1. Jika konser dibatalkan / di-delete (is_closed = 2)
+    if (event.is_closed === 2) {
+      return "Cancelled";
+    }
+
+    // 2. Jika konser dinonaktifkan / ditutup sementara (is_closed = 1)
+    if (event.is_closed === 1) {
+      return "Closed";
+    }
+
+    // 3. Jika tanggal konser sudah selesai / lewat dari hari ini
+    if (isEventPast(event.event_date)) {
+      return "Completed";
+    }
+
+    // 4. Konser masih aktif / akan datang
+    return "Active";
+  };
 
   const filteredEvents = useMemo(() => {
     let result = events;
 
     if (search) {
+      const query = search.toLowerCase();
       result = result.filter(
         (event) =>
-          event.title?.toLowerCase().includes(search.toLowerCase()) ||
-          event.venue?.toLowerCase().includes(search.toLowerCase()) ||
-          event.artist_name?.toLowerCase().includes(search.toLowerCase()),
+          event.title?.toLowerCase().includes(query) ||
+          event.venue?.toLowerCase().includes(query) ||
+          event.artist_name?.toLowerCase().includes(query),
       );
     }
 
     if (filter !== "All") {
-      const statusMap = {
-        Active: 0,
-        Closed: 1,
-      };
-      if (statusMap[filter] !== undefined) {
-        result = result.filter((event) => (event.is_closed ?? 0) === statusMap[filter]);
-      }
+      result = result.filter((event) => {
+        const isCancelled = event.is_closed === 2;
+        const isClosed = event.is_closed === 1;
+        const isPast = isEventPast(event.event_date);
+
+        // Active: Menyaring hanya konser yang aktif / akan datang
+        if (filter === "Active") {
+          return !isCancelled && !isClosed && !isPast;
+        }
+
+        // Closed: Menyaring konser yang dinonaktifkan / ditutup
+        if (filter === "Closed") {
+          return isClosed;
+        }
+
+        // Completed: Menyaring konser yang tanggal acaranya sudah selesai
+        if (filter === "Completed") {
+          return !isCancelled && isPast;
+        }
+
+        // Cancelled: Menyaring konser yang ditutup / dibatalkan / dibuang
+        if (filter === "Cancelled") {
+          return isCancelled;
+        }
+
+        return true;
+      });
     }
 
     return result;
@@ -692,14 +791,14 @@ export default function EventPage() {
               />
             </div>
 
-            <div className="flex w-fit items-center rounded-xl bg-[#05040d] p-1">
-              {["All", "Active", "Completed", "Cancelled"].map((item) => (
+            <div className="flex flex-wrap w-fit items-center rounded-xl bg-[#05040d] p-1 border border-white/[0.04]">
+              {["All", "Active", "Closed", "Completed", "Cancelled"].map((item) => (
                 <button
                   key={item}
                   onClick={() => setFilter(item)}
                   className={`rounded-lg px-4 py-2.5 text-sm font-medium transition ${
                     filter === item
-                      ? "bg-purple-800/70 text-purple-300"
+                      ? "bg-purple-800/70 text-purple-200 shadow"
                       : "text-zinc-500 hover:text-zinc-300"
                   }`}
                 >
@@ -785,15 +884,35 @@ export default function EventPage() {
                         </span>
 
                         <div>
-                          {isActive ? (
-                            <span className="rounded-full bg-amber-950/50 px-3 py-1 text-xs font-semibold text-amber-500 border border-amber-500/20">
-                              Active
-                            </span>
-                          ) : (
-                            <span className="rounded-full bg-zinc-800 px-3 py-1 text-xs font-semibold text-zinc-400">
-                              Closed
-                            </span>
-                          )}
+                          {(() => {
+                            const status = getEventStatus(event);
+                            if (status === "Active") {
+                              return (
+                                <span className="rounded-full bg-amber-950/50 px-3 py-1 text-xs font-semibold text-amber-500 border border-amber-500/20">
+                                  Active
+                                </span>
+                              );
+                            }
+                            if (status === "Completed") {
+                              return (
+                                <span className="rounded-full bg-blue-950/50 px-3 py-1 text-xs font-semibold text-blue-400 border border-blue-500/20">
+                                  Completed
+                                </span>
+                              );
+                            }
+                            if (status === "Cancelled") {
+                              return (
+                                <span className="rounded-full bg-red-950/60 px-3 py-1 text-xs font-semibold text-red-400 border border-red-500/20">
+                                  Cancelled
+                                </span>
+                              );
+                            }
+                            return (
+                              <span className="rounded-full bg-zinc-800 px-3 py-1 text-xs font-semibold text-zinc-400 border border-zinc-700/30">
+                                Closed
+                              </span>
+                            );
+                          })()}
                         </div>
 
                         <div className="flex items-center gap-2">
@@ -832,9 +951,13 @@ export default function EventPage() {
                           </button>
 
                           <button
-                            onClick={() => hapusEvent(event.id, event.title)}
-                            title="Hapus Event"
-                            className="flex h-9 w-9 items-center justify-center rounded-lg bg-red-950/20 text-zinc-500 transition hover:bg-red-950/50 hover:text-red-400"
+                            onClick={() => hapusEvent(event)}
+                            title={event.is_closed === 2 ? "Hapus Permanen dari Database" : "Batalkan / Buang Event (Masuk ke Cancelled)"}
+                            className={`flex h-9 w-9 items-center justify-center rounded-lg transition ${
+                              event.is_closed === 2
+                                ? "bg-red-950/40 text-red-400 hover:bg-red-900/60"
+                                : "bg-red-950/20 text-zinc-500 hover:bg-red-950/50 hover:text-red-400"
+                            }`}
                           >
                             <Trash2 size={17} />
                           </button>
@@ -991,7 +1114,10 @@ export default function EventPage() {
                       Active (Konser Aktif / Dibuka)
                     </option>
                     <option value={1} className="bg-[#0d0b1c] text-zinc-200">
-                      Closed (Konser Selesai / Ditutup)
+                      Closed (Konser Ditutup)
+                    </option>
+                    <option value={2} className="bg-[#0d0b1c] text-zinc-200">
+                      Cancelled (Konser Dibatalkan / Dibuang)
                     </option>
                   </select>
                 </div>
@@ -1035,15 +1161,35 @@ export default function EventPage() {
                   <h2 className="text-xl font-bold text-zinc-100">
                     {detailEvent.title}
                   </h2>
-                  {detailEvent.is_closed === 1 ? (
-                    <span className="rounded-full bg-zinc-800 px-3 py-0.5 text-xs font-semibold text-zinc-400">
-                      Closed
-                    </span>
-                  ) : (
-                    <span className="rounded-full bg-amber-950/60 border border-amber-500/30 px-3 py-0.5 text-xs font-semibold text-amber-400">
-                      Active
-                    </span>
-                  )}
+                  {(() => {
+                    const status = getEventStatus(detailEvent);
+                    if (status === "Active") {
+                      return (
+                        <span className="rounded-full bg-amber-950/60 border border-amber-500/30 px-3 py-0.5 text-xs font-semibold text-amber-400">
+                          Active
+                        </span>
+                      );
+                    }
+                    if (status === "Completed") {
+                      return (
+                        <span className="rounded-full bg-blue-950/60 border border-blue-500/30 px-3 py-0.5 text-xs font-semibold text-blue-400">
+                          Completed
+                        </span>
+                      );
+                    }
+                    if (status === "Cancelled") {
+                      return (
+                        <span className="rounded-full bg-red-950/60 border border-red-500/30 px-3 py-0.5 text-xs font-semibold text-red-400">
+                          Cancelled
+                        </span>
+                      );
+                    }
+                    return (
+                      <span className="rounded-full bg-zinc-800 px-3 py-0.5 text-xs font-semibold text-zinc-400 border border-zinc-700/30">
+                        Closed
+                      </span>
+                    );
+                  })()}
                 </div>
                 <p className="mt-1 text-xs text-zinc-500">
                   ID Konser: #{detailEvent.id}
