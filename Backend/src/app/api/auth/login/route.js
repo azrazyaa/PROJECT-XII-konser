@@ -17,7 +17,7 @@
 
         // 2. Cari user di database berdasarkan email
         const [users] = await db.query(
-        "SELECT id, name, email, password, role FROM users WHERE email = ?",
+        "SELECT id, name, email, password, role, avatar_url FROM users WHERE email = ?",
         [email],
         );
 
@@ -57,6 +57,7 @@
             name: user.name,
             email: user.email,
             role: user.role, // Membedakan admin & customer
+            avatar_url: user.avatar_url || null,
             },
         },
         });

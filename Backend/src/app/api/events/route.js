@@ -12,6 +12,8 @@
             e.venue,
             e.event_date,
             e.banner_url,
+            e.stage_layout,
+            e.total_quota,
             e.is_closed,
             a.name AS artist_name,
             a.genre AS artist_genre
@@ -38,7 +40,7 @@
     // 2. POST: Tambah Konser Baru (Khusus Admin)
     export async function POST(request) {
     try {
-        const { artist_id, title, description, venue, event_date, banner_url } =
+        const { artist_id, title, description, venue, event_date, banner_url, stage_layout, total_quota } =
         await request.json();
 
         if (!artist_id || !title || !venue || !event_date) {
@@ -52,8 +54,8 @@
         }
 
         const [result] = await db.query(
-        `INSERT INTO events (artist_id, title, description, venue, event_date, banner_url) 
-        VALUES (?, ?, ?, ?, ?, ?)`,
+        `INSERT INTO events (artist_id, title, description, venue, event_date, banner_url, stage_layout, total_quota) 
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
         [
             artist_id,
             title,
@@ -61,6 +63,8 @@
             venue,
             event_date,
             banner_url || "",
+            stage_layout || "Main Stage",
+            parseInt(total_quota, 10) || 0,
         ],
         );
 

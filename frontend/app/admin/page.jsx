@@ -1,7 +1,8 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import Link from "next/link";
+import AdminProfileModal from "@/components/AdminProfileModal";
 import {
   Bell,
   ChevronDown,
@@ -10,6 +11,7 @@ import {
   Clock3,
   LayoutDashboard,
   Inbox,
+  LogOut,
   Menu,
   Mic2,
   Plus,
@@ -37,7 +39,7 @@ const navItems = [
 const ticketRows = [
   {
     category: "VIP Experience",
-    price: "IDR 2,500,000",
+    price: "Rp 2.500.000",
     quota: "500",
     sold: "423",
     progress: 85,
@@ -45,7 +47,7 @@ const ticketRows = [
   },
   {
     category: "CAT 1 - Gold",
-    price: "IDR 1,500,000",
+    price: "Rp 1.500.000",
     quota: "1,500",
     sold: "1,280",
     progress: 85,
@@ -53,7 +55,7 @@ const ticketRows = [
   },
   {
     category: "CAT 2 - Silver",
-    price: "IDR 850,000",
+    price: "Rp 850.000",
     quota: "3,000",
     sold: "2,450",
     progress: 82,
@@ -61,7 +63,7 @@ const ticketRows = [
   },
   {
     category: "Festival",
-    price: "IDR 500,000",
+    price: "Rp 500.000",
     quota: "5,000",
     sold: "3,200",
     progress: 64,
@@ -187,57 +189,96 @@ function Sidebar({ open, setOpen }) {
   );
 }
 
-function Topbar({ setOpen }) {
+function Topbar({ setOpen, adminUser, onUpdateUser }) {
+  const [profileModalOpen, setProfileModalOpen] = useState(false);
+
+  const initial = adminUser?.name ? adminUser.name.trim().charAt(0).toUpperCase() : "A";
+  const displayName = adminUser?.name || "Admin";
+  const displayEmail = adminUser?.email || "admin@konser.com";
+  const displayRole = adminUser?.role === "admin" ? "SYSTEM ADMIN" : (adminUser?.role?.toUpperCase() || "ADMIN");
+
   return (
-    <header className="fixed right-0 top-0 z-30 h-[98px] border-b border-white/[0.06] bg-[#0a0815]/90 backdrop-blur-xl lg:left-[292px]">
-      <div className="flex h-full items-center px-5 sm:px-8">
-        <button
-          onClick={() => setOpen(true)}
-          className="text-zinc-300 lg:hidden"
-        >
-          <Menu size={24} />
-        </button>
-
-        <div className="ml-auto flex items-center gap-5">
-          {/* Notification */}
-          <button className="relative text-zinc-400 hover:text-zinc-200">
-            <Bell size={21} />
-
-            <span className="absolute -right-1 -top-2 h-2.5 w-2.5 rounded-full border border-[#0a0815] bg-amber-500" />
+    <>
+      <header className="fixed right-0 top-0 z-30 h-[98px] border-b border-white/[0.06] bg-[#0a0815]/90 backdrop-blur-xl lg:left-[292px]">
+        <div className="flex h-full items-center px-5 sm:px-8">
+          <button
+            onClick={() => setOpen(true)}
+            className="text-zinc-300 lg:hidden"
+          >
+            <Menu size={24} />
           </button>
 
-          {/* Inbox */}
-          <button className="relative text-zinc-400 hover:text-zinc-200">
-            <Inbox size={21} />
+          <div className="ml-auto flex items-center gap-5">
+            {/* Notification */}
+            <button className="relative text-zinc-400 hover:text-zinc-200">
+              <Bell size={21} />
 
-            <span className="absolute -right-3 -top-3 flex h-5 min-w-5 items-center justify-center rounded-full bg-purple-600 px-1 text-[10px] font-bold text-white">
-              3
-            </span>
-          </button>
+              <span className="absolute -right-1 -top-2 h-2.5 w-2.5 rounded-full border border-[#0a0815] bg-amber-500" />
+            </button>
 
-          <div className="mx-1 h-9 w-px bg-white/[0.07]" />
+            {/* Inbox */}
+            <button className="relative text-zinc-400 hover:text-zinc-200">
+              <Inbox size={21} />
 
-          {/* Profile */}
-          <button className="flex items-center gap-3">
-            <div className="flex h-10 w-10 items-center justify-center rounded-full border border-purple-500/60 bg-gradient-to-br from-purple-400 to-purple-950 font-bold text-white">
-              N
-            </div>
+              <span className="absolute -right-3 -top-3 flex h-5 min-w-5 items-center justify-center rounded-full bg-purple-600 px-1 text-[10px] font-bold text-white">
+                3
+              </span>
+            </button>
 
-            <div className="hidden text-left sm:block">
-              <div className="text-sm font-bold text-zinc-200">Naira</div>
+            <div className="mx-1 h-9 w-px bg-white/[0.07]" />
 
-              <div className="text-xs text-zinc-500">System Administrator</div>
-            </div>
+            {/* Profile Button - Klik untuk membuka Modal Profil Besar */}
+            <button
+              onClick={() => setProfileModalOpen(true)}
+              className="group flex items-center gap-3 rounded-2xl p-1.5 transition hover:bg-white/[0.04]"
+              title="Klik untuk membuka & mengedit profil akun admin"
+            >
+              <div className="relative flex h-10 w-10 shrink-0 items-center justify-center overflow-hidden rounded-full border border-purple-500/60 bg-gradient-to-br from-purple-500 to-purple-950 font-bold text-white shadow-md shadow-purple-950/40 transition group-hover:scale-105 group-hover:border-purple-400">
+                {adminUser?.avatar_url ? (
+                  <img
+                    src={adminUser.avatar_url}
+                    alt={displayName}
+                    className="h-full w-full object-cover"
+                    onError={(e) => {
+                      e.currentTarget.style.display = "none";
+                    }}
+                  />
+                ) : (
+                  <span>{initial}</span>
+                )}
+              </div>
 
-            <span className="hidden rounded-full border border-purple-500/50 bg-purple-950/50 px-3 py-1 text-[10px] font-bold tracking-wider text-purple-400 md:block">
-              SYSTEM ADMIN
-            </span>
+              <div className="hidden text-left sm:block">
+                <div className="text-sm font-bold text-zinc-200 leading-tight group-hover:text-purple-300 transition">
+                  {displayName}
+                </div>
 
-            <ChevronDown size={15} className="hidden text-zinc-500 sm:block" />
-          </button>
+                <div className="text-xs text-zinc-500 truncate max-w-[140px]">
+                  {displayEmail}
+                </div>
+              </div>
+
+              <span className="hidden rounded-full border border-purple-500/50 bg-purple-950/50 px-3 py-1 text-[10px] font-bold tracking-wider text-purple-400 md:block">
+                {displayRole}
+              </span>
+
+              <ChevronDown
+                size={15}
+                className="hidden text-zinc-500 transition-transform group-hover:text-purple-400 sm:block"
+              />
+            </button>
+          </div>
         </div>
-      </div>
-    </header>
+      </header>
+
+      {/* Modal Profil Besar */}
+      <AdminProfileModal
+        isOpen={profileModalOpen}
+        onClose={() => setProfileModalOpen(false)}
+        user={adminUser}
+        onUpdateUser={onUpdateUser}
+      />
+    </>
   );
 }
 
@@ -397,12 +438,54 @@ function EventCard() {
 
 export default function AdminPage() {
   const [sidebarOpen, setSidebarOpen] = useState(false);
+  const [adminUser, setAdminUser] = useState({
+    name: "Admin",
+    email: "admin@konser.com",
+    role: "admin",
+    avatar_url: null,
+  });
+
+  const loadUserData = () => {
+    try {
+      const stored = localStorage.getItem("user");
+      if (stored) {
+        const parsed = JSON.parse(stored);
+        if (parsed && (parsed.name || parsed.email)) {
+          setAdminUser({
+            name: parsed.name || "Admin",
+            email: parsed.email || "admin@konser.com",
+            role: parsed.role || "admin",
+            avatar_url: parsed.avatar_url || null,
+            id: parsed.id,
+          });
+        }
+      }
+    } catch (e) {
+      console.error("Error reading admin user from localStorage:", e);
+    }
+  };
+
+  useEffect(() => {
+    loadUserData();
+  }, []);
+
+  const handleUpdateUser = (updated) => {
+    if (updated) {
+      setAdminUser(updated);
+    } else {
+      loadUserData();
+    }
+  };
 
   return (
     <div className="min-h-screen bg-[#080612] text-zinc-200">
       <Sidebar open={sidebarOpen} setOpen={setSidebarOpen} />
 
-      <Topbar setOpen={setSidebarOpen} />
+      <Topbar
+        setOpen={setSidebarOpen}
+        adminUser={adminUser}
+        onUpdateUser={handleUpdateUser}
+      />
 
       <main className="min-h-screen pt-[98px] lg:pl-[292px]">
         {/* Background */}
@@ -422,8 +505,11 @@ export default function AdminPage() {
             </h1>
 
             <p className="mt-1 text-[15px] text-zinc-500">
-              Welcome back, Naira — here is your real-time concert management
-              overview.
+              Welcome back,{" "}
+              <span className="font-semibold text-purple-300">
+                {adminUser.name}
+              </span>{" "}
+              — here is your real-time concert management overview.
             </p>
           </section>
 
@@ -431,7 +517,7 @@ export default function AdminPage() {
           <section className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
             <StatCard
               icon={CircleDollarSign}
-              value="IDR 847.5M"
+              value="Rp 847.5M"
               label="Total Revenue"
               change="18.2%"
             />

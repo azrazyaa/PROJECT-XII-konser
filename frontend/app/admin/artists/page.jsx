@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import Link from "next/link";
 import {
   Bell,
@@ -10,6 +10,7 @@ import {
   Inbox,
   LayoutDashboard,
   Lock,
+  LogOut,
   Menu,
   Mic2,
   QrCode,
@@ -232,6 +233,45 @@ function Sidebar({ open, setOpen }) {
 ========================================================= */
 
 function Topbar({ setOpen }) {
+  const [adminUser, setAdminUser] = useState({
+    name: "Admin",
+    email: "admin@konser.com",
+    role: "admin",
+  });
+  const [menuOpen, setMenuOpen] = useState(false);
+
+  useEffect(() => {
+    try {
+      const stored = localStorage.getItem("user");
+      if (stored) {
+        const parsed = JSON.parse(stored);
+        if (parsed && (parsed.name || parsed.email)) {
+          setAdminUser({
+            name: parsed.name || "Admin",
+            email: parsed.email || "admin@konser.com",
+            role: parsed.role || "admin",
+            id: parsed.id,
+          });
+        }
+      }
+    } catch (e) {
+      console.error("Error reading admin user from localStorage:", e);
+    }
+  }, []);
+
+  const initial = adminUser?.name ? adminUser.name.trim().charAt(0).toUpperCase() : "A";
+  const displayName = adminUser?.name || "Admin";
+  const displayEmail = adminUser?.email || "admin@konser.com";
+  const displayRole = adminUser?.role === "admin" ? "SYSTEM ADMIN" : (adminUser?.role?.toUpperCase() || "ADMIN");
+
+  const handleLogout = () => {
+    if (confirm("Apakah Anda yakin ingin keluar / logout dari akun Admin?")) {
+      localStorage.removeItem("token");
+      localStorage.removeItem("user");
+      window.location.href = "/login";
+    }
+  };
+
   return (
     <header className="fixed right-0 top-0 z-30 h-[98px] border-b border-white/[0.06] bg-[#0a0815]/90 backdrop-blur-xl lg:left-[290px]">
       <div className="flex h-full items-center px-5 sm:px-8">
@@ -262,23 +302,94 @@ function Topbar({ setOpen }) {
           <div className="mx-1 h-9 w-px bg-white/[0.07]" />
 
           {/* PROFILE */}
-          <button className="flex items-center gap-3">
-            <div className="flex h-10 w-10 items-center justify-center rounded-full border border-purple-500/60 bg-gradient-to-br from-purple-400 to-purple-950 font-bold text-white">
-              N
-            </div>
+          <div className="relative">
+            <button
+              onClick={() => setMenuOpen(!menuOpen)}
+              className="flex items-center gap-3 rounded-2xl p-1.5 transition hover:bg-white/[0.04]"
+              title="Profil Admin"
+            >
+              <div className="flex h-10 w-10 items-center justify-center rounded-full border border-purple-500/60 bg-gradient-to-br from-purple-500 to-purple-950 font-bold text-white shadow-md shadow-purple-950/40">
+                {initial}
+              </div>
 
-            <div className="hidden text-left sm:block">
-              <div className="text-sm font-bold text-zinc-200">Naira</div>
+              <div className="hidden text-left sm:block">
+                <div className="text-sm font-bold text-zinc-200 leading-tight">
+                  {displayName}
+                </div>
+                <div className="text-xs text-zinc-500 truncate max-w-[140px]">
+                  {displayEmail}
+                </div>
+              </div>
 
-              <div className="text-xs text-zinc-500">System Administrator</div>
-            </div>
+              <span className="hidden rounded-full border border-purple-500/50 bg-purple-950/50 px-3 py-1 text-[10px] font-bold tracking-wider text-purple-400 md:block">
+                {displayRole}
+              </span>
 
-            <span className="hidden rounded-full border border-purple-500/50 bg-purple-950/50 px-3 py-1 text-[10px] font-bold tracking-wider text-purple-400 md:block">
-              SYSTEM ADMIN
-            </span>
+              <ChevronDown
+                size={15}
+                className={`hidden text-zinc-500 transition-transform duration-200 sm:block ${
+                  menuOpen ? "rotate-180 text-purple-400" : ""
+                }`}
+              />
+            </button>
 
-            <ChevronDown size={15} className="hidden text-zinc-500 sm:block" />
-          </button>
+            {/* Dropdown Menu Popover */}
+            {menuOpen && (
+              <>
+                <div
+                  className="fixed inset-0 z-40"
+                  onClick={() => setMenuOpen(false)}
+                />
+                <div className="absolute right-0 top-full mt-2 z-50 w-72 overflow-hidden rounded-2xl border border-white/[0.08] bg-[#0c091a] p-4 shadow-2xl shadow-purple-950/70 backdrop-blur-2xl">
+                  {/* Header info */}
+                  <div className="flex items-center gap-3.5 border-b border-white/[0.06] pb-3.5">
+                    <div className="flex h-12 w-12 items-center justify-center rounded-2xl border border-purple-500/50 bg-gradient-to-br from-purple-500 to-indigo-900 text-lg font-bold text-white shadow-md">
+                      {initial}
+                    </div>
+                    <div className="min-w-0 flex-1">
+                      <div className="font-bold text-zinc-100 truncate text-[15px]">
+                        {displayName}
+                      </div>
+                      <div className="text-xs text-zinc-400 truncate">
+                        {displayEmail}
+                      </div>
+                      <div className="mt-1 flex items-center gap-1.5">
+                        <span className="h-2 w-2 rounded-full bg-emerald-400 animate-pulse" />
+                        <span className="text-[11px] text-emerald-400 font-medium">
+                          Active Session
+                        </span>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Account Metadata */}
+                  <div className="my-3 space-y-1.5 rounded-xl bg-white/[0.02] p-2.5 text-xs text-zinc-400">
+                    <div className="flex justify-between">
+                      <span className="text-zinc-500">User ID</span>
+                      <span className="font-mono font-medium text-zinc-300">
+                        {adminUser?.id ? `#${adminUser.id}` : "#ADM-01"}
+                      </span>
+                    </div>
+                    <div className="flex justify-between">
+                      <span className="text-zinc-500">Authority Role</span>
+                      <span className="font-medium text-purple-300">
+                        {adminUser?.role === "admin" ? "Super Admin" : adminUser?.role || "Admin"}
+                      </span>
+                    </div>
+                  </div>
+
+                  {/* Logout Button */}
+                  <button
+                    onClick={handleLogout}
+                    className="flex w-full items-center justify-center gap-2 rounded-xl bg-red-950/40 py-2.5 text-sm font-semibold text-red-400 border border-red-500/20 transition hover:bg-red-900/60 hover:text-red-200"
+                  >
+                    <LogOut size={16} />
+                    <span>Keluar / Logout</span>
+                  </button>
+                </div>
+              </>
+            )}
+          </div>
         </div>
       </div>
     </header>

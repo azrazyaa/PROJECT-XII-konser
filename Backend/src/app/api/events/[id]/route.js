@@ -12,12 +12,14 @@
         venue,
         event_date,
         banner_url,
+        stage_layout,
+        total_quota,
         is_closed,
         } = await request.json();
 
         const [result] = await db.query(
         `UPDATE events 
-        SET artist_id = ?, title = ?, description = ?, venue = ?, event_date = ?, banner_url = ?, is_closed = ?
+        SET artist_id = ?, title = ?, description = ?, venue = ?, event_date = ?, banner_url = ?, stage_layout = ?, total_quota = ?, is_closed = ?
         WHERE id = ?`,
         [
             artist_id,
@@ -26,6 +28,8 @@
             venue,
             event_date,
             banner_url,
+            stage_layout || "Main Stage",
+            parseInt(total_quota, 10) || 0,
             is_closed ?? 0,
             id,
         ],

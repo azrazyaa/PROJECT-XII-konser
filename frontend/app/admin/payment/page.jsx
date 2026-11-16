@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from "react";
 import Link from "next/link";
+import AdminProfileModal from "@/components/AdminProfileModal";
 import {
   BarChart3,
   Bell,
@@ -12,6 +13,7 @@ import {
   Eye,
   Inbox,
   LayoutDashboard,
+  LogOut,
   Menu,
   Mic2,
   QrCode,
@@ -263,56 +265,128 @@ function Sidebar({ open, setOpen }) {
 ========================================================= */
 
 function Topbar({ setOpen }) {
+  const [adminUser, setAdminUser] = useState({
+    name: "Admin",
+    email: "admin@konser.com",
+    role: "admin",
+    avatar_url: null,
+  });
+  const [profileModalOpen, setProfileModalOpen] = useState(false);
+
+  const loadUserData = () => {
+    try {
+      const stored = localStorage.getItem("user");
+      if (stored) {
+        const parsed = JSON.parse(stored);
+        if (parsed && (parsed.name || parsed.email)) {
+          setAdminUser({
+            name: parsed.name || "Admin",
+            email: parsed.email || "admin@konser.com",
+            role: parsed.role || "admin",
+            avatar_url: parsed.avatar_url || null,
+            id: parsed.id,
+          });
+        }
+      }
+    } catch (e) {
+      console.error("Error reading admin user from localStorage:", e);
+    }
+  };
+
+  useEffect(() => {
+    loadUserData();
+  }, []);
+
+  const initial = adminUser?.name ? adminUser.name.trim().charAt(0).toUpperCase() : "A";
+  const displayName = adminUser?.name || "Admin";
+  const displayEmail = adminUser?.email || "admin@konser.com";
+  const displayRole = adminUser?.role === "admin" ? "SYSTEM ADMIN" : (adminUser?.role?.toUpperCase() || "ADMIN");
+
   return (
-    <header className="fixed left-0 right-0 top-0 z-30 h-[98px] border-b border-white/[0.06] bg-[#0d0b1c]/95 px-5 backdrop-blur-xl lg:left-[290px]">
-      <div className="flex h-full items-center">
-        {/* MOBILE MENU BUTTON */}
-        <button
-          onClick={() => setOpen(true)}
-          className="text-zinc-300 lg:hidden"
-          aria-label="Open sidebar"
-        >
-          <Menu size={24} />
-        </button>
-
-        {/* RIGHT SIDE */}
-        <div className="ml-auto flex items-center gap-5">
-          {/* NOTIFICATION */}
-          <button className="relative text-zinc-400 transition hover:text-zinc-200">
-            <Bell size={21} />
-            <span className="absolute -right-1 -top-2 h-2.5 w-2.5 rounded-full border border-[#0a0815] bg-amber-500" />
+    <>
+      <header className="fixed left-0 right-0 top-0 z-30 h-[98px] border-b border-white/[0.06] bg-[#0d0b1c]/95 px-5 backdrop-blur-xl lg:left-[290px]">
+        <div className="flex h-full items-center">
+          {/* MOBILE MENU BUTTON */}
+          <button
+            onClick={() => setOpen(true)}
+            className="text-zinc-300 lg:hidden"
+            aria-label="Open sidebar"
+          >
+            <Menu size={24} />
           </button>
 
-          {/* INBOX */}
-          <button className="relative text-zinc-400 transition hover:text-zinc-200">
-            <Inbox size={21} />
-            <span className="absolute -right-3 -top-3 flex h-5 min-w-5 items-center justify-center rounded-full bg-purple-600 px-1 text-[10px] font-bold text-white">
-              3
-            </span>
-          </button>
+          {/* RIGHT SIDE */}
+          <div className="ml-auto flex items-center gap-5">
+            {/* NOTIFICATION */}
+            <button className="relative text-zinc-400 transition hover:text-zinc-200">
+              <Bell size={21} />
+              <span className="absolute -right-1 -top-2 h-2.5 w-2.5 rounded-full border border-[#0a0815] bg-amber-500" />
+            </button>
 
-          <div className="mx-1 h-9 w-px bg-white/[0.07]" />
+            {/* INBOX */}
+            <button className="relative text-zinc-400 transition hover:text-zinc-200">
+              <Inbox size={21} />
+              <span className="absolute -right-3 -top-3 flex h-5 min-w-5 items-center justify-center rounded-full bg-purple-600 px-1 text-[10px] font-bold text-white">
+                3
+              </span>
+            </button>
 
-          {/* PROFILE */}
-          <button className="flex items-center gap-3">
-            <div className="flex h-10 w-10 items-center justify-center rounded-full border border-purple-500/60 bg-gradient-to-br from-purple-400 to-purple-950 font-bold text-white">
-              N
-            </div>
+            <div className="mx-1 h-9 w-px bg-white/[0.07]" />
 
-            <div className="hidden text-left sm:block">
-              <div className="text-sm font-bold text-zinc-200">Naira</div>
-              <div className="text-xs text-zinc-500">System Administrator</div>
-            </div>
+            {/* PROFILE BUTTON */}
+            <button
+              onClick={() => setProfileModalOpen(true)}
+              className="group flex items-center gap-3 rounded-2xl p-1.5 transition hover:bg-white/[0.04]"
+              title="Klik untuk membuka & mengedit profil akun admin"
+            >
+              <div className="relative flex h-10 w-10 shrink-0 items-center justify-center overflow-hidden rounded-full border border-purple-500/60 bg-gradient-to-br from-purple-500 to-purple-950 font-bold text-white shadow-md shadow-purple-950/40 transition group-hover:scale-105 group-hover:border-purple-400">
+                {adminUser?.avatar_url ? (
+                  <img
+                    src={adminUser.avatar_url}
+                    alt={displayName}
+                    className="h-full w-full object-cover"
+                    onError={(e) => {
+                      e.currentTarget.style.display = "none";
+                    }}
+                  />
+                ) : (
+                  <span>{initial}</span>
+                )}
+              </div>
 
-            <span className="hidden rounded-full border border-purple-500/50 bg-purple-950/50 px-3 py-1 text-[10px] font-bold tracking-wider text-purple-400 md:block">
-              SYSTEM ADMIN
-            </span>
+              <div className="hidden text-left sm:block">
+                <div className="text-sm font-bold text-zinc-200 leading-tight group-hover:text-purple-300 transition">
+                  {displayName}
+                </div>
+                <div className="text-xs text-zinc-500 truncate max-w-[140px]">
+                  {displayEmail}
+                </div>
+              </div>
 
-            <ChevronDown size={15} className="hidden text-zinc-500 sm:block" />
-          </button>
+              <span className="hidden rounded-full border border-purple-500/50 bg-purple-950/50 px-3 py-1 text-[10px] font-bold tracking-wider text-purple-400 md:block">
+                {displayRole}
+              </span>
+
+              <ChevronDown
+                size={15}
+                className="hidden text-zinc-500 transition-transform group-hover:text-purple-400 sm:block"
+              />
+            </button>
+          </div>
         </div>
-      </div>
-    </header>
+      </header>
+
+      {/* Modal Profil Besar */}
+      <AdminProfileModal
+        isOpen={profileModalOpen}
+        onClose={() => setProfileModalOpen(false)}
+        user={adminUser}
+        onUpdateUser={(updated) => {
+          if (updated) setAdminUser(updated);
+          else loadUserData();
+        }}
+      />
+    </>
   );
 }
 

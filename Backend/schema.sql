@@ -8,6 +8,7 @@ CREATE TABLE users (
     email VARCHAR(100) UNIQUE NOT NULL,
     password VARCHAR(255) NOT NULL,
     role ENUM('admin', 'customer') DEFAULT 'customer',
+    avatar_url VARCHAR(255),
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
 );
@@ -30,6 +31,7 @@ CREATE TABLE IF NOT EXISTS events (
     venue VARCHAR(150) NOT NULL,
     event_date DATETIME NOT NULL,
     banner_url VARCHAR(255),
+    stage_layout VARCHAR(50) DEFAULT 'Main Stage',
     is_closed TINYINT DEFAULT 0, -- Tanpa (1) agar tidak warning
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
@@ -91,4 +93,5 @@ CREATE TABLE tickets (
     scanned_at DATETIME NULL,
     FOREIGN KEY (order_detail_id) REFERENCES order_details(id) ON DELETE CASCADE
 );
+
 
