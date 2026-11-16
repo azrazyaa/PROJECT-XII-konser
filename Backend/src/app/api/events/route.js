@@ -1,7 +1,8 @@
 import { NextResponse } from "next/server";
 import db from "@/lib/db";
+import { syncEventTicketCategories } from "@/lib/stageTemplates";
 
-// 1. GET: Ambil Semua Daftar Konser (Bisa diakses Publik/Mobile/Web)
+// 1. GET: Ambil Semua Daftar Konser
 export async function GET() {
   try {
     const query = `
@@ -32,12 +33,13 @@ export async function GET() {
   } catch (error) {
     return NextResponse.json(
       { success: false, message: "Gagal mengambil data", error: error.message },
-      { status: 500 },
+      { status: 500 }
     );
   }
 }
 
 // 2. POST: Tambah Konser Baru (Khusus Admin)
+//    Otomatis membuat ticket_categories sesuai template layout panggung
 export async function POST(request) {
   try {
     const body = await request.json();
@@ -80,9 +82,11 @@ export async function POST(request) {
           success: false,
           message: "Artist, Judul, Lokasi, dan Tanggal Konser wajib diisi",
         },
-        { status: 400 },
+        { status: 400 }
       );
     }
+
+    const finalLayout = stage_layout || "Main Stage";
 
     const [result] = await db.query(
       `INSERT INTO events (artist_id, title, description, venue, event_date, banner_url, stage_layout, total_quota) 
@@ -94,27 +98,33 @@ export async function POST(request) {
         venue,
         event_date,
         banner_url || "",
-        stage_layout || "Main Stage",
+        finalLayout,
         parseInt(total_quota, 10) || 0,
-      ],
+      ]
     );
+
+    const newEventId = result.insertId;
+
+    // Otomatis sinkronisasi Ticket Classes berdasarkan template layout panggung
+    await syncEventTicketCategories(db, newEventId, finalLayout);
 
     return NextResponse.json(
       {
         success: true,
-        message: "Berhasil menambah konser baru",
-        data: { id: result.insertId, title, venue },
+        message: "Berhasil menambah konser baru. Kategori tiket otomatis dibuat sesuai template layout panggung.",
+        data: { id: newEventId, title, venue, stage_layout: finalLayout },
       },
-      { status: 201 },
+      { status: 201 }
     );
   } catch (error) {
+    console.error("POST /api/events error:", error);
     return NextResponse.json(
       {
         success: false,
         message: "Gagal menambah konser",
         error: error.message,
       },
-      { status: 500 },
+      { status: 500 }
     );
   }
 }

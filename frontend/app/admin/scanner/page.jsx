@@ -1,29 +1,38 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useRef, useState, useCallback } from "react";
 import Link from "next/link";
 import AdminProfileModal from "@/components/AdminProfileModal";
+import { Html5Qrcode, Html5QrcodeSupportedFormats } from "html5-qrcode";
 import {
   Bell,
   BarChart3,
+  CalendarDays,
+  Camera,
+  CheckCircle2,
   ChevronDown,
+  Copy,
+  CreditCard,
+  Image as ImageIcon,
   Inbox,
   LayoutDashboard,
   LogOut,
-  Mic2,
+  MapPin,
   QrCode,
-  Settings,
-  ShieldCheck,
-  Tag,
-  Ticket,
-  X,
+  RefreshCw,
+  RotateCw,
   ScanLine,
   Search,
-  CheckCircle2,
+  Settings,
+  ShieldCheck,
+  SwitchCamera,
+  Tag,
+  Ticket,
+  Upload,
   User,
-  CalendarDays,
-  MapPin,
-  CreditCard,
+  X,
+  XCircle,
+  AlertTriangle,
 } from "lucide-react";
 
 /* =========================================================
@@ -43,8 +52,9 @@ function Sidebar({ open, setOpen }) {
       )}
 
       <aside
-        className={`fixed left-0 top-0 z-50 flex h-screen w-[290px] flex-col border-r border-purple-500/20 bg-[#0d0b1c] transition-transform duration-300 ${open ? "translate-x-0" : "-translate-x-full"
-          } lg:translate-x-0`}
+        className={`fixed left-0 top-0 z-50 flex h-screen w-[290px] flex-col border-r border-purple-500/20 bg-[#0d0b1c] transition-transform duration-300 ${
+          open ? "translate-x-0" : "-translate-x-full"
+        } lg:translate-x-0`}
       >
         {/* LOGO */}
         <div className="flex h-[98px] items-center border-b border-white/[0.06] px-7">
@@ -56,7 +66,6 @@ function Sidebar({ open, setOpen }) {
             <div className="text-[16px] font-bold tracking-wide text-purple-100">
               NOCTURNE
             </div>
-
             <div className="text-sm text-zinc-500">Admin Portal</div>
           </div>
 
@@ -85,7 +94,7 @@ function Sidebar({ open, setOpen }) {
               <span className="text-[15px] font-medium">Dashboard</span>
             </Link>
 
-            {/* EVENT kjweqjkrnsj  */}
+            {/* EVENT */}
             <Link
               href="/admin/event"
               onClick={() => setOpen(false)}
@@ -102,7 +111,6 @@ function Sidebar({ open, setOpen }) {
               className="flex items-center gap-5 rounded-lg px-3 py-3.5 text-zinc-400 transition hover:bg-white/[0.035] hover:text-zinc-200"
             >
               <Tag size={19} strokeWidth={1.8} />
-
               <span className="text-[15px] font-medium">
                 Ticket Classes & Quota
               </span>
@@ -125,9 +133,7 @@ function Sidebar({ open, setOpen }) {
               className="flex items-center gap-5 rounded-lg border-l-2 border-purple-500 bg-purple-900/20 px-3 py-3.5 text-zinc-100"
             >
               <QrCode size={19} strokeWidth={1.8} className="text-purple-400" />
-
               <span className="text-[15px] font-medium">QR Ticket Scanner</span>
-
               <span className="ml-auto h-1.5 w-1.5 rounded-full bg-purple-400" />
             </Link>
 
@@ -154,7 +160,6 @@ function Sidebar({ open, setOpen }) {
               <div className="text-sm font-medium text-zinc-200">
                 System Settings
               </div>
-
               <div className="text-xs text-zinc-500">v2.4.1</div>
             </div>
 
@@ -167,7 +172,7 @@ function Sidebar({ open, setOpen }) {
 }
 
 /* =========================================================
-   TOPBAR  atas yg mana dia tuh posisinya ditaas ya semisal dia
+   TOPBAR
 ========================================================= */
 
 function Topbar({ setOpen }) {
@@ -212,7 +217,6 @@ function Topbar({ setOpen }) {
     <>
       <header className="fixed left-0 right-0 top-0 z-30 h-[66px] border-b border-white/[0.06] bg-[#090714]/90 backdrop-blur-xl lg:left-[290px]">
         <div className="flex h-full items-center px-5 sm:px-7">
-          {/* MOBILE MENU */}
           <button
             onClick={() => setOpen(true)}
             className="mr-4 text-zinc-300 lg:hidden"
@@ -221,13 +225,11 @@ function Topbar({ setOpen }) {
           </button>
 
           <div className="ml-auto flex items-center gap-5">
-            {/* NOTIFICATION */}
             <button className="relative text-zinc-400 transition hover:text-zinc-200">
               <Bell size={21} />
               <span className="absolute -right-1 -top-2 h-2.5 w-2.5 rounded-full border border-[#0a0815] bg-amber-500" />
             </button>
 
-            {/* INBOX */}
             <button className="relative text-zinc-400 transition hover:text-zinc-200">
               <Inbox size={21} />
               <span className="absolute -right-3 -top-3 flex h-5 min-w-5 items-center justify-center rounded-full bg-purple-600 px-1 text-[10px] font-bold text-white">
@@ -237,7 +239,6 @@ function Topbar({ setOpen }) {
 
             <div className="mx-1 h-9 w-px bg-white/[0.07]" />
 
-            {/* PROFILE BUTTON */}
             <button
               onClick={() => setProfileModalOpen(true)}
               className="group flex items-center gap-3 rounded-2xl p-1.5 transition hover:bg-white/[0.04]"
@@ -280,7 +281,6 @@ function Topbar({ setOpen }) {
         </div>
       </header>
 
-      {/* Modal Profil Besar */}
       <AdminProfileModal
         isOpen={profileModalOpen}
         onClose={() => setProfileModalOpen(false)}
@@ -294,325 +294,734 @@ function Topbar({ setOpen }) {
   );
 }
 
-
 /* =========================================================
-   TICKET DATA
+   DATABASE TIKET FRONTEND (LENGKAP UNTUK SIMULASI)
 ========================================================= */
 
-const ticketDatabase = {
+const INITIAL_TICKETS = {
   "TCKT-CELE-001-A12": {
     id: "TCKT-CELE-001-A12",
     customer: "Rizky Pratama",
-    email: "rizky@email.com",
+    email: "rizky.pratama@email.com",
     event: "Celestial Night Tour 2026",
     ticketClass: "VIP Experience",
     seat: "VIP-A12",
-    date: "August 15, 2026",
+    date: "15 Agustus 2026",
     venue: "Jakarta International Stadium",
     payment: "Verified",
-    status: "Valid",
+    status: "valid", // "valid" | "used"
+    scannedAt: null,
   },
-
   "TCKT-CELE-002-B18": {
     id: "TCKT-CELE-002-B18",
     customer: "Dewi Anggraini",
     email: "dewi.a@email.com",
     event: "Celestial Night Tour 2026",
-    ticketClass: "CAT 1 - Gold",
-    seat: "G-B18",
-    date: "August 15, 2026",
+    ticketClass: "CAT 1 (Side)",
+    seat: "CAT1-B18",
+    date: "15 Agustus 2026",
     venue: "Jakarta International Stadium",
     payment: "Verified",
-    status: "Valid",
+    status: "used",
+    scannedAt: "16 Nov 2026, 19:15 WIB",
+  },
+  "NOCT-2026-TS-001": {
+    id: "NOCT-2026-TS-001",
+    customer: "Sarah Jenkins",
+    email: "sarah.j@email.com",
+    event: "Taylor Swift – The Eras Tour",
+    ticketClass: "Main Stage & Catwalk",
+    seat: "FOS-042",
+    date: "25 Oktober 2026",
+    venue: "Gelora Bung Karno",
+    payment: "Verified",
+    status: "valid",
+    scannedAt: null,
+  },
+  "NOCT-2026-TS-002": {
+    id: "NOCT-2026-TS-002",
+    customer: "Budi Santoso",
+    email: "budi.s@email.com",
+    event: "Taylor Swift – The Eras Tour",
+    ticketClass: "General Admission",
+    seat: "GA-Standing-105",
+    date: "25 Oktober 2026",
+    venue: "Gelora Bung Karno",
+    payment: "Verified",
+    status: "used",
+    scannedAt: "16 Nov 2026, 18:30 WIB",
+  },
+  "NOCT-2026-LANY-01": {
+    id: "NOCT-2026-LANY-01",
+    customer: "Amanda Putri",
+    email: "amanda.p@email.com",
+    event: "LANY – soft World Tour 2026",
+    ticketClass: "Pit A & B (FOS)",
+    seat: "Pit-A-088",
+    date: "12 November 2026",
+    venue: "Beach City International Stadium",
+    payment: "Verified",
+    status: "valid",
+    scannedAt: null,
+  },
+  "NOCT-2026-WEEKND-01": {
+    id: "NOCT-2026-WEEKND-01",
+    customer: "Farhan Maulana",
+    email: "farhan.m@email.com",
+    event: "The Weeknd – After Hours Til Dawn",
+    ticketClass: "Center Stage",
+    seat: "CS-Row1-05",
+    date: "05 Desember 2026",
+    venue: "Indonesia Arena",
+    payment: "Verified",
+    status: "valid",
+    scannedAt: null,
+  },
+  "NOCT-2026-NIKI-01": {
+    id: "NOCT-2026-NIKI-01",
+    customer: "Clarissa Tan",
+    email: "clarissa.t@email.com",
+    event: "NIKI – Buzz World Tour",
+    ticketClass: "Orchestra (Stalls)",
+    seat: "Stalls-F14",
+    date: "18 Januari 2027",
+    venue: "Teater Jakarta, TIM",
+    payment: "Verified",
+    status: "valid",
+    scannedAt: null,
+  },
+  "NOCT-2026-ARI-01": {
+    id: "NOCT-2026-ARI-01",
+    customer: "Dimas Arya",
+    email: "dimas.arya@email.com",
+    event: "Ariana Grande – Eternal Sunshine",
+    ticketClass: "General Admission",
+    seat: "GA-Standing-312",
+    date: "20 Februari 2027",
+    venue: "Bali International Convention Center",
+    payment: "Verified",
+    status: "valid",
+    scannedAt: null,
   },
 };
 
 /* =========================================================
-   SCANNER PAGE
+   HELPER EKSTRAKSI ID TIKET
+========================================================= */
+
+function extractTicketId(rawText) {
+  if (!rawText) return "";
+  let trimmed = String(rawText).trim();
+
+  // Bersihkan tanda kutip pembungkus jika ada
+  if (
+    (trimmed.startsWith('"') && trimmed.endsWith('"')) ||
+    (trimmed.startsWith("'") && trimmed.endsWith("'"))
+  ) {
+    trimmed = trimmed.slice(1, -1).trim();
+  }
+
+  // 1. Coba jika format JSON
+  try {
+    const parsed = JSON.parse(trimmed);
+    if (parsed && typeof parsed === "object") {
+      const extracted =
+        parsed.ticket_id ||
+        parsed.ticketId ||
+        parsed.id ||
+        parsed.ticketCode ||
+        parsed.ticket_code ||
+        parsed.code ||
+        parsed.ticket;
+      if (extracted) return String(extracted).trim().toUpperCase();
+    }
+  } catch (e) {
+    // Bukan JSON
+  }
+
+  // 2. Coba jika format URL
+  try {
+    if (trimmed.startsWith("http://") || trimmed.startsWith("https://")) {
+      const url = new URL(trimmed);
+      const paramId =
+        url.searchParams.get("id") ||
+        url.searchParams.get("ticket_id") ||
+        url.searchParams.get("ticketId") ||
+        url.searchParams.get("code") ||
+        url.searchParams.get("ticket");
+      if (paramId) return paramId.trim().toUpperCase();
+
+      const segments = url.pathname.split("/").filter(Boolean);
+      if (segments.length > 0) {
+        return segments[segments.length - 1].trim().toUpperCase();
+      }
+    }
+  } catch (e) {
+    // Bukan URL
+  }
+
+  // 3. Plain text
+  return trimmed.toUpperCase();
+}
+
+/* Bunyikan notifikasi audio beep saat QR terbaca */
+function playScanBeep() {
+  try {
+    const AudioContext = window.AudioContext || window.webkitAudioContext;
+    if (!AudioContext) return;
+    const ctx = new AudioContext();
+    const osc = ctx.createOscillator();
+    const gain = ctx.createGain();
+    osc.connect(gain);
+    gain.connect(ctx.destination);
+    osc.type = "sine";
+    osc.frequency.setValueAtTime(880, ctx.currentTime);
+    gain.gain.setValueAtTime(0.12, ctx.currentTime);
+    gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.15);
+    osc.start(ctx.currentTime);
+    osc.stop(ctx.currentTime + 0.15);
+  } catch (e) {
+    // Web Audio diabaikan jika tidak aktif
+  }
+}
+
+/* =========================================================
+   SCANNER PAGE COMPONENT
 ========================================================= */
 
 export default function ScannerPage() {
   const [sidebarOpen, setSidebarOpen] = useState(false);
 
+  // Status Scanner & Kamera
   const [scanning, setScanning] = useState(false);
+  const [cameras, setCameras] = useState([]);
+  const [selectedCameraId, setSelectedCameraId] = useState("");
+  const [cameraError, setCameraError] = useState("");
 
+  // Data Tiket & Status Scan
+  const [ticketsData, setTicketsData] = useState(INITIAL_TICKETS);
+  const [scannedRawText, setScannedRawText] = useState("");
+  const [matchedTicket, setMatchedTicket] = useState(null);
+  const [scanStatus, setScanStatus] = useState(null);
+
+  // Input Manual
   const [manualId, setManualId] = useState("");
 
-  const [ticket, setTicket] = useState(null);
+  // Modal QR Code Preview (untuk pengujian instan)
+  const [qrModalTicket, setQrModalTicket] = useState(null);
 
-  const [error, setError] = useState("");
-
-  const videoRef = useRef(null);
-
-  const streamRef = useRef(null);
-
-  const scanIntervalRef = useRef(null);
-
-  /* Canvas tersembunyi untuk flip frame sebelum di-detect */
-  const canvasRef = useRef(null);
+  // Refs untuk html5-qrcode
+  const html5QrCodeRef = useRef(null);
+  const isStartingRef = useRef(false);
+  const lastScannedRef = useRef("");
+  const lastScanTimeRef = useRef(0);
+  const fileInputRef = useRef(null);
 
   /* =======================================================
-     VERIFY TICKET
-  ======================================================= */
-
-  const verifyTicketById = (id) => {
-    const cleanId = id.trim().toUpperCase();
-
-    setError("");
-    setTicket(null);
-
-    if (!cleanId) {
-      setError("Please enter a ticket ID.");
-      return false;
-    }
-
-    const foundTicket = ticketDatabase[cleanId];
-
-    if (!foundTicket) {
-      setError("Ticket not found. Please check the ticket ID.");
-      return false;
-    }
-
-    setTicket(foundTicket);
-    setManualId(cleanId);
-
-    return true;
-  };
-
-  /* =======================================================
-     STOP CAMERA
-  ======================================================= */
-
-  const stopScan = () => {
-    /* STOP QR DETECTOR */
-    if (scanIntervalRef.current) {
-      clearInterval(scanIntervalRef.current);
-      scanIntervalRef.current = null;
-    }
-
-    /* STOP CAMERA TRACKS */
-    if (streamRef.current) {
-      streamRef.current.getTracks().forEach((track) => {
-        track.stop();
-      });
-
-      streamRef.current = null;
-    }
-
-    /* REMOVE VIDEO STREAM */
-    if (videoRef.current) {
-      videoRef.current.srcObject = null;
-    }
-
-    setScanning(false);
-  };
-
-  /* =======================================================
-     START CAMERA
-  ======================================================= */
-
-  const startScan = async () => {
-    setError("");
-    setTicket(null);
-
-    /* Browser support */
-    if (!navigator.mediaDevices?.getUserMedia) {
-      setError(
-        "Camera is not supported. Please use Chrome or Edge with HTTPS/localhost.",
-      );
-      return;
-    }
-
-    /* Stop previous camera if any */
-    stopScan();
-
-    try {
-      let stream;
-
-      /*
-       * FIRST TRY:
-       * Kamera depan / webcam laptop.
-       * azzura kamilya sakhi cantik bngt adueh
-       * kalo semisal iya yaudH  mau apa hahh dri mana munculnyavhvvgvhgggggvvhghvhgvhgvvhgvvghvvhgvhv
-       */
-      try {
-        stream = await navigator.mediaDevices.getUserMedia({
-          video: {
-            facingMode: "user",
-            width: {
-              ideal: 1280,
-            },
-            height: {
-              ideal: 720,
-            },
-          },
-          audio: false,
-        });
-      } catch (firstError) {
-        console.warn(
-          "Front camera failed, trying default camera...",
-          firstError,
-        );
-
-        /*
-         * FALLBACK:
-         * Pakai kamera apa pun yang tersedia.
-         */
-        stream = await navigator.mediaDevices.getUserMedia({
-          video: true,
-          audio: false,
-        });
-      }
-
-      streamRef.current = stream;
-
-      /*
-       * PENTING:
-       * Kita langsung pasang stream ke video.
-       * Video element SEKARANG SELALU ADA DI DOM.
-       * 
-       */
-      if (videoRef.current) {
-        videoRef.current.srcObject = stream;
-
-        try {
-          await videoRef.current.play();
-        } catch (playError) {
-          console.warn("Video play error:", playError);
-        }
-      }
-
-      setScanning(true);
-
-      /* ===================================================
-         QR DETECTOR
-      =================================================== */
-
-      if ("BarcodeDetector" in window) {
-        try {
-          const supportedFormats =
-            await window.BarcodeDetector.getSupportedFormats();
-
-          if (supportedFormats.includes("qr_code")) {
-            const detector = new window.BarcodeDetector({
-              formats: ["qr_code"],
-            });
-
-            scanIntervalRef.current = setInterval(async () => {
-              if (!videoRef.current) return;
-
-              if (videoRef.current.readyState < 2) return;
-
-              if (videoRef.current.videoWidth === 0) return;
-
-              try {
-                /* Gambar frame ke canvas dengan flip horizontal,
-                   supaya QR terbaca benar meski video di-flip CSS */
-                const canvas = canvasRef.current;
-                if (!canvas) return;
-
-                const vw = videoRef.current.videoWidth;
-                const vh = videoRef.current.videoHeight;
-
-                canvas.width = vw;
-                canvas.height = vh;
-
-                const ctx = canvas.getContext("2d");
-                ctx.save();
-                ctx.translate(vw, 0);
-                ctx.scale(-1, 1);
-                ctx.drawImage(videoRef.current, 0, 0, vw, vh);
-                ctx.restore();
-
-                const barcodes = await detector.detect(canvas);
-
-                if (barcodes.length > 0) {
-                  const value = barcodes[0].rawValue;
-
-                  if (value) {
-                    const success = verifyTicketById(value);
-
-                    if (success) {
-                      stopScan();
-                    }
-                  }
-                }
-              } catch (scanError) {
-                console.error("QR detection error:", scanError);
-              }
-            }, 500);
-          }
-        } catch (detectorError) {
-          console.warn("BarcodeDetector is not available:", detectorError);
-        }
-      }
-    } catch (err) {
-      console.error("Camera error:", err);
-
-      let message =
-        "Camera tidak bisa dibuka. Pastikan kamera tersedia dan izin kamera sudah diberikan.";
-
-      if (err?.name === "NotAllowedError") {
-        message =
-          "Izin kamera ditolak. Klik ikon kamera di address bar browser lalu izinkan kamera.";
-      }
-
-      if (err?.name === "NotFoundError") {
-        message = "Kamera tidak ditemukan. Pastikan laptop/PC memiliki webcam.";
-      }
-
-      if (err?.name === "NotReadableError") {
-        message =
-          "Kamera sedang digunakan aplikasi lain. Tutup aplikasi seperti Zoom, Meet, atau Camera.";
-      }
-
-      if (err?.name === "SecurityError") {
-        message =
-          "Browser memblokir kamera. Jalankan project melalui localhost atau HTTPS.";
-      }
-
-      setError(message);
-
-      stopScan();
-    }
-  };
-
-  /* =======================================================
-     MANUAL LOOKUP
-  ======================================================= */
-
-  const verifyTicket = () => {
-    verifyTicketById(manualId);
-  };
-
-  /* =======================================================
-     CLEANUP
+     CEK KAMERA TANPA MENGUNCI WEBCAM PADA MOUNT
   ======================================================= */
 
   useEffect(() => {
+    let mounted = true;
+    async function initCheckDevices() {
+      try {
+        if (typeof navigator !== "undefined" && navigator?.mediaDevices?.enumerateDevices) {
+          const allDevices = await navigator.mediaDevices.enumerateDevices();
+          const videoDevices = allDevices.filter((d) => d.kind === "videoinput");
+          if (mounted && videoDevices.length > 0) {
+            setCameras(
+              videoDevices.map((d, i) => ({
+                id: d.deviceId,
+                label: d.label || `Kamera ${i + 1}`,
+              }))
+            );
+          }
+        }
+      } catch (e) {
+        console.warn("Device enumeration check:", e);
+      }
+    }
+    initCheckDevices();
     return () => {
-      if (scanIntervalRef.current) {
-        clearInterval(scanIntervalRef.current);
-      }
-
-      if (streamRef.current) {
-        streamRef.current.getTracks().forEach((track) => {
-          track.stop();
-        });
-      }
+      mounted = false;
     };
   }, []);
 
   /* =======================================================
-     RENDER
+     STOP SCANNER
   ======================================================= */
+
+  const stopScanner = async () => {
+    if (html5QrCodeRef.current) {
+      try {
+        if (html5QrCodeRef.current.isScanning) {
+          await html5QrCodeRef.current.stop();
+        }
+        html5QrCodeRef.current.clear();
+      } catch (err) {
+        console.warn("Error stopping scanner:", err);
+      } finally {
+        html5QrCodeRef.current = null;
+      }
+    }
+    setScanning(false);
+  };
+
+  /* =======================================================
+     VERIFIKASI & PENCOCOKAN TIKET
+  ======================================================= */
+
+  const processTicketVerification = useCallback(
+    (rawScanValue) => {
+      const ticketId = extractTicketId(rawScanValue);
+      setScannedRawText(ticketId || rawScanValue);
+
+      if (!ticketId) {
+        setMatchedTicket(null);
+        setScanStatus({
+          type: "invalid",
+          message: "QR Code tidak valid",
+          detail: "QR Code tidak memuat data ID tiket yang dapat dikenali.",
+        });
+        return;
+      }
+
+      // Pencocokan data tiket case-insensitive
+      let existing = ticketsData[ticketId];
+      let resolvedKey = ticketId;
+      if (!existing) {
+        const foundKey = Object.keys(ticketsData).find(
+          (k) => k.toUpperCase() === ticketId.toUpperCase()
+        );
+        if (foundKey) {
+          existing = ticketsData[foundKey];
+          resolvedKey = foundKey;
+        }
+      }
+
+      if (!existing) {
+        // 8. Jika QR Code tidak dikenali:
+        setMatchedTicket(null);
+        setScanStatus({
+          type: "invalid",
+          message: "QR Code tidak valid",
+          detail: `ID Tiket "${ticketId}" tidak terdaftar dalam database konser.`,
+        });
+        return;
+      }
+
+      // 9. Jika tiket sudah pernah digunakan:
+      if (existing.status === "used") {
+        setMatchedTicket(existing);
+        setScanStatus({
+          type: "used",
+          message: "Tiket sudah digunakan",
+          detail: `Tiket ini telah dipindai sebelumnya pada ${
+            existing.scannedAt || "sesi terdahulu"
+          }. Pengunjung tidak dapat masuk kembali.`,
+        });
+        return;
+      }
+
+      // 10. Jika tiket valid dan belum digunakan:
+      const nowStr =
+        new Date().toLocaleString("id-ID", {
+          day: "numeric",
+          month: "short",
+          year: "numeric",
+          hour: "2-digit",
+          minute: "2-digit",
+        }) + " WIB";
+
+      const updatedTicket = {
+        ...existing,
+        status: "used",
+        scannedAt: nowStr,
+      };
+
+      setTicketsData((prev) => ({
+        ...prev,
+        [resolvedKey]: updatedTicket,
+      }));
+
+      setMatchedTicket(updatedTicket);
+      setScanStatus({
+        type: "success",
+        message: "Tiket berhasil dipindai",
+        detail: `Tiket valid atas nama ${existing.customer} (${existing.event} - ${existing.ticketClass}). Pengunjung diizinkan masuk venue.`,
+      });
+    },
+    [ticketsData]
+  );
+
+  /* =======================================================
+     START SCANNER (DENGAN MULTI-FALLBACK LAPTOP & HP)
+  ======================================================= */
+
+  const startScanner = async (overrideCameraId = null) => {
+    setCameraError("");
+
+    if (isStartingRef.current) return;
+    isStartingRef.current = true;
+
+    try {
+      // 1. Bersihkan scanner lama jika masih berjalan
+      if (html5QrCodeRef.current) {
+        try {
+          if (html5QrCodeRef.current.isScanning) {
+            await html5QrCodeRef.current.stop();
+          }
+          html5QrCodeRef.current.clear();
+        } catch (e) {
+          console.warn("Cleanup error before restart:", e);
+        }
+        html5QrCodeRef.current = null;
+      }
+
+      const qrReaderElem = document.getElementById("qr-reader");
+      if (!qrReaderElem) {
+        throw new Error("Elemen pemindai kamera tidak ditemukan di halaman.");
+      }
+
+      const html5QrCode = new Html5Qrcode("qr-reader", {
+        formatsToSupport: [Html5QrcodeSupportedFormats.QR_CODE],
+        verbose: false,
+      });
+      html5QrCodeRef.current = html5QrCode;
+
+      const onScanSuccess = (decodedText) => {
+        if (!decodedText) return;
+        const now = Date.now();
+        if (
+          decodedText === lastScannedRef.current &&
+          now - lastScanTimeRef.current < 2500
+        ) {
+          return;
+        }
+        lastScannedRef.current = decodedText;
+        lastScanTimeRef.current = now;
+
+        playScanBeep();
+        processTicketVerification(decodedText);
+      };
+
+      const onScanFailure = () => {
+        // Frame tanpa QR code, abaikan
+      };
+
+      const scanConfig = {
+        fps: 15, // frame scanning responsif tanpa batasan qrbox kaku
+      };
+
+      setScanning(true);
+
+      const targetCamId = overrideCameraId || selectedCameraId;
+      let started = false;
+
+      // Percobaan 1: Gunakan targetCamId jika sudah dipilih
+      if (targetCamId) {
+        try {
+          await html5QrCode.start(
+            targetCamId,
+            scanConfig,
+            onScanSuccess,
+            onScanFailure
+          );
+          started = true;
+        } catch (e) {
+          console.warn("Gagal start dengan targetCamId, mencoba fallback:", e);
+        }
+      }
+
+      // Percobaan 2: Coba facingMode environment (ideal untuk HP kamera belakang)
+      if (!started) {
+        try {
+          await html5QrCode.start(
+            { facingMode: "environment" },
+            scanConfig,
+            onScanSuccess,
+            onScanFailure
+          );
+          started = true;
+        } catch (e) {
+          console.warn("Gagal start facingMode environment, mencoba facingMode user:", e);
+        }
+      }
+
+      // Percobaan 3: Coba facingMode user (ideal untuk laptop webcam)
+      if (!started) {
+        try {
+          await html5QrCode.start(
+            { facingMode: "user" },
+            scanConfig,
+            onScanSuccess,
+            onScanFailure
+          );
+          started = true;
+        } catch (e) {
+          console.warn("Gagal start facingMode user, mencoba enumerasi kamera:", e);
+        }
+      }
+
+      // Percobaan 4: Ambil daftar device dan coba ID kamera pertama
+      if (!started) {
+        const devs = await Html5Qrcode.getCameras();
+        if (devs && devs.length > 0) {
+          await html5QrCode.start(
+            devs[0].id,
+            scanConfig,
+            onScanSuccess,
+            onScanFailure
+          );
+          started = true;
+        } else {
+          throw new Error("Tidak ada kamera yang dapat diakses pada perangkat ini.");
+        }
+      }
+
+      // Setelah izin sukses diberikan, perbarui dropdown kamera dengan nama lengkap
+      try {
+        const finalDevices = await Html5Qrcode.getCameras();
+        if (finalDevices && finalDevices.length > 0) {
+          setCameras(finalDevices);
+          if (!selectedCameraId) {
+            setSelectedCameraId(finalDevices[0].id);
+          }
+        }
+      } catch (e) {
+        // Abaikan jika tidak diizinkan
+      }
+    } catch (err) {
+      console.error("Camera startup error:", err);
+      let msg = "Kamera tidak dapat diakses.";
+
+      if (err?.name === "NotAllowedError" || String(err).includes("Permission")) {
+        msg =
+          "Izin kamera ditolak. Silakan klik ikon gembok/kamera di address bar browser Anda dan ubah ke 'Allow'.";
+      } else if (err?.name === "NotFoundError" || String(err).includes("NotFound")) {
+        msg = "Kamera tidak ditemukan. Pastikan laptop/PC memiliki webcam aktif.";
+      } else if (err?.name === "NotReadableError") {
+        msg =
+          "Kamera sedang dipakai oleh aplikasi lain (Zoom, Teams, Google Meet, dll). Tutup aplikasi tersebut lalu coba lagi.";
+      } else {
+        msg = err?.message || "Terjadi kesalahan saat mengaktifkan kamera.";
+      }
+
+      setCameraError(msg);
+      setScanning(false);
+      if (html5QrCodeRef.current) {
+        try {
+          if (html5QrCodeRef.current.isScanning) {
+            await html5QrCodeRef.current.stop();
+          }
+          html5QrCodeRef.current.clear();
+        } catch (e) {}
+        html5QrCodeRef.current = null;
+      }
+    } finally {
+      isStartingRef.current = false;
+    }
+  };
+
+  /* =======================================================
+     GANTI KAMERA (SWITCH CAMERA)
+  ======================================================= */
+
+  const handleSwitchCamera = async () => {
+    let currentCameras = cameras;
+    if (currentCameras.length <= 1) {
+      try {
+        const freshDevs = await Html5Qrcode.getCameras();
+        if (freshDevs && freshDevs.length > 0) {
+          setCameras(freshDevs);
+          currentCameras = freshDevs;
+        }
+      } catch (e) {}
+    }
+
+    if (currentCameras.length <= 1) {
+      alert("Hanya 1 kamera yang terdeteksi pada perangkat Anda.");
+      return;
+    }
+
+    const currentIndex = currentCameras.findIndex((c) => c.id === selectedCameraId);
+    const nextIndex = (currentIndex + 1) % currentCameras.length;
+    const nextCamera = currentCameras[nextIndex];
+
+    setSelectedCameraId(nextCamera.id);
+
+    if (scanning) {
+      await startScanner(nextCamera.id);
+    }
+  };
+
+  const handleCameraSelectChange = async (e) => {
+    const newId = e.target.value;
+    setSelectedCameraId(newId);
+    if (scanning) {
+      await startScanner(newId);
+    }
+  };
+
+  /* =======================================================
+     UNGGAH & SCAN FILE GAMBAR QR CODE
+  ======================================================= */
+
+  const handleFileUploadScan = async (e) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    try {
+      setCameraError("");
+      await stopScanner();
+
+      const html5QrCode = new Html5Qrcode("qr-reader", {
+        formatsToSupport: [Html5QrcodeSupportedFormats.QR_CODE],
+        verbose: false,
+      });
+
+      const decodedText = await html5QrCode.scanFile(file, false);
+      html5QrCode.clear();
+
+      if (decodedText) {
+        playScanBeep();
+        processTicketVerification(decodedText);
+      }
+    } catch (err) {
+      console.warn("File scan error:", err);
+      setScanStatus({
+        type: "invalid",
+        message: "QR Code tidak valid",
+        detail:
+          "Gambar tidak memuat QR Code yang terbaca atau kualitas gambar kurang jelas.",
+      });
+    } finally {
+      if (fileInputRef.current) {
+        fileInputRef.current.value = "";
+      }
+    }
+  };
+
+  /* =======================================================
+     MANUAL INPUT LOOKUP
+  ======================================================= */
+
+  const handleManualVerify = () => {
+    if (!manualId.trim()) {
+      setCameraError("Ketik kode tiket terlebih dahulu.");
+      return;
+    }
+    processTicketVerification(manualId.trim());
+  };
+
+  /* =======================================================
+     RESET STATUS TIKET (PENGUJIAN ULANG)
+  ======================================================= */
+
+  const resetAllTickets = () => {
+    setTicketsData((prev) => {
+      const next = {};
+      Object.keys(prev).forEach((id) => {
+        next[id] = {
+          ...prev[id],
+          status: "valid",
+          scannedAt: null,
+        };
+      });
+      return next;
+    });
+    if (matchedTicket) {
+      setMatchedTicket((prev) =>
+        prev
+          ? {
+              ...prev,
+              status: "valid",
+              scannedAt: null,
+            }
+          : null
+      );
+    }
+    setScanStatus({
+      type: "success",
+      message: "Semua tiket berhasil di-reset",
+      detail:
+        "Seluruh data tiket pengujian telah dikembalikan ke status 'valid' (belum digunakan) dan siap dipindai ulang.",
+    });
+  };
+
+  const resetTicketStatus = (ticketId) => {
+    setTicketsData((prev) => {
+      const current = prev[ticketId];
+      if (!current) return prev;
+      return {
+        ...prev,
+        [ticketId]: {
+          ...current,
+          status: "valid",
+          scannedAt: null,
+        },
+      };
+    });
+
+    if (matchedTicket?.id === ticketId) {
+      setMatchedTicket((prev) => ({
+        ...prev,
+        status: "valid",
+        scannedAt: null,
+      }));
+      setScanStatus({
+        type: "success",
+        message: "Status tiket berhasil di-reset",
+        detail: "Tiket kembali berstatus Valid (belum digunakan) dan siap dipindai lagi.",
+      });
+    }
+  };
+
+  /* =======================================================
+     CLEANUP SAAT MENINGGALKAN HALAMAN
+  ======================================================= */
+
+  useEffect(() => {
+    return () => {
+      if (html5QrCodeRef.current) {
+        if (html5QrCodeRef.current.isScanning) {
+          html5QrCodeRef.current.stop().catch(console.warn);
+        }
+        html5QrCodeRef.current.clear();
+      }
+    };
+  }, []);
 
   return (
     <div className="min-h-screen bg-[#070510] text-white">
-      {/* =================================================
-          BACKGROUND IMAGE
-      ================================================= */}
+      {/* CSS KHUSUS UNTUK MENAMPILKAN VIDEO KAMERA DENGAN JELAS */}
+      <style>{`
+        #qr-reader {
+          width: 100% !important;
+          height: 100% !important;
+          border: none !important;
+          background: transparent !important;
+        }
+        #qr-reader video {
+          width: 100% !important;
+          height: 100% !important;
+          object-fit: cover !important;
+          border-radius: 0.85rem !important;
+        }
+        #qr-reader__scan_region {
+          background: transparent !important;
+          width: 100% !important;
+          height: 100% !important;
+        }
+        #qr-reader__dashboard {
+          display: none !important;
+        }
+        #qr-reader__status_span {
+          display: none !important;
+        }
+      `}</style>
 
+      {/* BACKGROUND IMAGE & PURPLE GLOW */}
       <div
         className="fixed inset-0 z-0 bg-cover bg-center"
         style={{
@@ -620,390 +1029,656 @@ export default function ScannerPage() {
             "linear-gradient(rgba(10,5,25,0.76), rgba(7,4,18,0.94)), url('https://images.unsplash.com/photo-1501386761578-eac5c94b800a?auto=format&fit=crop&w=2200&q=85')",
         }}
       />
-
-      {/* PURPLE GLOW */}
-
       <div className="pointer-events-none fixed inset-0 z-0 overflow-hidden">
         <div className="absolute left-[18%] top-[10%] h-[500px] w-[650px] rounded-full bg-purple-900/25 blur-[160px]" />
-
         <div className="absolute right-[5%] top-[25%] h-[500px] w-[600px] rounded-full bg-violet-900/20 blur-[160px]" />
-
         <div className="absolute bottom-0 left-[40%] h-[500px] w-[700px] rounded-full bg-purple-950/30 blur-[170px]" />
       </div>
 
-      {/* SIDEBAR */}
-
+      {/* SIDEBAR & TOPBAR */}
       <Sidebar open={sidebarOpen} setOpen={setSidebarOpen} />
-
-      {/* TOPBAR */}
-
       <Topbar setOpen={setSidebarOpen} />
 
-      {/* MAIN */}
-
+      {/* MAIN CONTENT */}
       <main className="relative z-10 min-h-screen pt-[66px] lg:pl-[290px]">
-        <div className="mx-auto max-w-[1500px] px-5 py-7 sm:px-7 lg:px-7">
-          {/* TITLE */}
+        <div className="mx-auto max-w-[1500px] px-4 py-7 sm:px-7 lg:px-8">
+          {/* TITLE & HEADER */}
+          <div className="mb-6 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+            <div>
+              <h1 className="text-[26px] sm:text-[28px] font-bold tracking-tight text-zinc-100 flex items-center gap-2.5">
+                <QrCode size={28} className="text-purple-400" />
+                QR Ticket Scanner
+              </h1>
+              <p className="mt-1 text-xs sm:text-sm text-zinc-400">
+                Pindai QR code tiket pengunjung menggunakan kamera laptop atau HP secara langsung dengan library <code>html5-qrcode</code>.
+              </p>
+            </div>
 
-          <h1 className="mb-5 text-[28px] font-bold tracking-tight text-zinc-100">
-            QR Ticket Scanner
-          </h1>
+            {/* Quick Status Pill */}
+            <div className="flex items-center gap-2 rounded-full border border-white/[0.08] bg-black/40 px-3.5 py-1.5 backdrop-blur-md w-fit">
+              <span
+                className={`flex h-2.5 w-2.5 rounded-full ${
+                  scanning ? "bg-emerald-400 animate-pulse" : "bg-zinc-600"
+                }`}
+              />
+              <span className="text-xs font-semibold text-zinc-300">
+                {scanning ? "Kamera Aktif & Memindai" : "Kamera Standby"}
+              </span>
+            </div>
+          </div>
 
-          {/* CONTENT GRID */}
-
-          <div className="grid gap-5 xl:grid-cols-[1.45fr_0.95fr]">
+          {/* MAIN TWO-COLUMN GRID */}
+          <div className="grid gap-6 xl:grid-cols-[1.3fr_1fr]">
             {/* =================================================
-                LEFT - CAMERA
+                KOLOM KIRI: CAMERA VIEWFINDER & KONTROL
             ================================================= */}
+            <section className="flex flex-col rounded-2xl border border-white/[0.06] bg-[#0c0a1a]/90 p-5 sm:p-6 shadow-2xl backdrop-blur-xl">
+              <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 mb-4">
+                <div className="flex items-center gap-2">
+                  <Camera size={19} className="text-purple-400" />
+                  <h2 className="text-[17px] font-bold text-zinc-100">
+                    Camera Viewfinder
+                  </h2>
+                </div>
 
-            <section className="rounded-2xl border border-white/[0.04] bg-[#05040d]/90 p-5 shadow-2xl shadow-black/30 backdrop-blur-xl">
-              <h2 className="mb-4 text-[16px] font-semibold text-zinc-200">
-                Camera Viewfinder
-              </h2>
+                {/* PILIHAN KAMERA JIKA PERANGKAT PUNYA LEBIH DARI 1 */}
+                <div className="flex items-center gap-2">
+                  {cameras.length > 0 ? (
+                    <select
+                      value={selectedCameraId}
+                      onChange={handleCameraSelectChange}
+                      className="h-9 rounded-xl border border-white/[0.1] bg-black/50 px-3 text-xs font-medium text-zinc-200 outline-none focus:border-purple-500 max-w-[210px] truncate"
+                      title="Pilih kamera perangkat"
+                    >
+                      {cameras.map((cam, idx) => (
+                        <option
+                          key={cam.id}
+                          value={cam.id}
+                          className="bg-[#0d0b1c] text-zinc-200"
+                        >
+                          {cam.label || `Kamera ${idx + 1}`}
+                        </option>
+                      ))}
+                    </select>
+                  ) : (
+                    <span className="text-[11px] text-zinc-500 italic">
+                      Kamera default
+                    </span>
+                  )}
 
-              {/* VIEWFINDER */}
+                  {/* Tombol Ganti Kamera Cepat */}
+                  <button
+                    onClick={handleSwitchCamera}
+                    className="flex h-9 items-center gap-1.5 rounded-xl border border-purple-500/30 bg-purple-950/40 px-3 text-xs font-bold text-purple-300 transition hover:bg-purple-900/60 active:scale-95 shrink-0"
+                    title="Ganti ke kamera berikutnya"
+                  >
+                    <SwitchCamera size={14} />
+                    <span>Ganti</span>
+                  </button>
+                </div>
+              </div>
 
-              <div className="relative aspect-[1.45/1] min-h-[430px] overflow-hidden rounded-xl bg-black">
-                {/* =================================================
-                    VIDEO
-
-                    PENTING:
-                    VIDEO SELALU ADA DI DOM.
-                    Jangan pakai {scanning ? <video /> : <div />}
-                    karena ref harus sudah tersedia ketika kamera
-                    dibuka.
-                ================================================= */}
-
-                <video
-                  ref={videoRef}
-                  autoPlay
-                  playsInline
-                  muted
-                  style={{ transform: "scaleX(-1)" }}
-                  className={`absolute inset-0 h-full w-full object-cover transition-opacity duration-300 ${scanning ? "opacity-100" : "opacity-0"
-                    }`}
+              {/* CONTAINER VIEWFINDER html5-qrcode */}
+              <div className="relative aspect-[4/3] sm:aspect-[16/11] min-h-[320px] sm:min-h-[400px] w-full overflow-hidden rounded-2xl bg-black/95 border border-white/[0.08] shadow-inner flex items-center justify-center">
+                {/* ID qr-reader SELALU MOUNTED DI DOM */}
+                <div
+                  id="qr-reader"
+                  className="relative z-10 w-full h-full"
                 />
 
-                {/* Canvas tersembunyi untuk flip frame QR detection */}
-                <canvas ref={canvasRef} className="hidden" />
-
-                {/* DARK BACKGROUND WHEN CAMERA OFF */}
-
-                {!scanning && <div className="absolute inset-0 bg-black/90" />}
-
-                {/* DARK OVERLAY */}
-
-                {scanning && (
-                  <div className="pointer-events-none absolute inset-0 bg-black/10" />
-                )}
-
-                {/* GRID */}
-
-                <div className="pointer-events-none absolute inset-0">
-                  <div className="absolute left-1/2 top-0 h-full w-px bg-purple-500/10" />
-
-                  <div className="absolute left-0 top-1/2 h-px w-full bg-purple-500/10" />
-                </div>
-
-                {/* SCANNER CORNERS */}
-
-                <div className="pointer-events-none absolute inset-5">
-                  {/* TOP LEFT */}
-
-                  <div className="absolute left-0 top-0 h-9 w-9 border-l-2 border-t-2 border-purple-500" />
-
-                  {/* TOP RIGHT */}
-
-                  <div className="absolute right-0 top-0 h-9 w-9 border-r-2 border-t-2 border-purple-500" />
-
-                  {/* BOTTOM LEFT */}
-
-                  <div className="absolute bottom-0 left-0 h-9 w-9 border-b-2 border-l-2 border-purple-500" />
-
-                  {/* BOTTOM RIGHT */}
-
-                  <div className="absolute bottom-0 right-0 h-9 w-9 border-b-2 border-r-2 border-purple-500" />
-                </div>
-
-                {/* CAMERA READY */}
-
+                {/* OVERLAY STANDBY SAAT KAMERA BELUM DIJALANKAN */}
                 {!scanning && (
-                  <div className="absolute left-1/2 top-1/2 flex -translate-x-1/2 -translate-y-1/2 flex-col items-center">
-                    <div className="mb-4 flex h-16 w-16 items-center justify-center rounded-full bg-purple-950/80">
+                  <div className="absolute inset-0 z-20 flex flex-col items-center justify-center text-center p-6 bg-black/90 backdrop-blur-sm">
+                    <div className="mb-4 flex h-20 w-20 items-center justify-center rounded-2xl bg-gradient-to-br from-purple-950/80 to-purple-900/40 border border-purple-500/30 shadow-lg shadow-purple-950/50">
                       <ScanLine
-                        size={30}
-                        strokeWidth={1.7}
+                        size={36}
+                        strokeWidth={1.8}
                         className="text-purple-400"
                       />
                     </div>
-
-                    <p className="text-[16px] font-medium text-zinc-400">
-                      Camera ready
+                    <p className="text-base sm:text-lg font-bold text-zinc-200">
+                      Kamera Scanner Belum Aktif
                     </p>
-
-                    <p className="mt-1 text-sm text-zinc-500">
-                      Position QR code within the frame
+                    <p className="mt-1 max-w-[320px] text-xs sm:text-sm text-zinc-400 leading-relaxed">
+                      Tekan tombol <strong>"Mulai Scan"</strong> di bawah untuk membaca QR Code tiket melalui kamera secara langsung.
                     </p>
                   </div>
                 )}
 
-                {/* SCANNING */}
-
+                {/* ANIMATED SCAN LINE & CORNER GUIDES KETIKA SCANNING */}
                 {scanning && (
                   <>
-                    {/* ANIMATED SCAN LINE */}
-
                     <style>{`
-                      @keyframes scanline {
-                        0%   { top: 8%; }
-                        50%  { top: 86%; }
-                        100% { top: 8%; }
+                      @keyframes scanAnimLine {
+                        0%   { top: 10%; opacity: 0.8; }
+                        50%  { top: 86%; opacity: 1; }
+                        100% { top: 10%; opacity: 0.8; }
                       }
-                      .scan-line-animated {
-                        animation: scanline 2s ease-in-out infinite;
+                      .scan-laser-line {
                         position: absolute;
-                        left: 2rem;
-                        right: 2rem;
-                        height: 2px;
-                        background: linear-gradient(to right, transparent, rgba(168,85,247,0.95), transparent);
-                        box-shadow: 0 0 18px 3px rgba(168,85,247,0.7);
+                        left: 10%;
+                        right: 10%;
+                        height: 3px;
+                        background: linear-gradient(to right, transparent, #a855f7, #c084fc, #a855f7, transparent);
+                        box-shadow: 0 0 18px 4px rgba(168, 85, 247, 0.85);
+                        animation: scanAnimLine 2.2s ease-in-out infinite;
+                        pointer-events: none;
+                        z-index: 30;
                       }
                     `}</style>
+                    <div className="scan-laser-line" />
 
-                    <div className="scan-line-animated" />
+                    {/* BIDIK KOTAK SUDUT (CORNERS) */}
+                    <div className="pointer-events-none absolute inset-8 z-20">
+                      <div className="absolute left-0 top-0 h-8 w-8 border-l-2 border-t-2 border-purple-400 rounded-tl-lg" />
+                      <div className="absolute right-0 top-0 h-8 w-8 border-r-2 border-t-2 border-purple-400 rounded-tr-lg" />
+                      <div className="absolute bottom-0 left-0 h-8 w-8 border-b-2 border-l-2 border-purple-400 rounded-bl-lg" />
+                      <div className="absolute bottom-0 right-0 h-8 w-8 border-b-2 border-r-2 border-purple-400 rounded-br-lg" />
+                    </div>
 
-                    {/* STATUS */}
-
-                    <div className="absolute bottom-5 left-1/2 -translate-x-1/2 rounded-full border border-purple-500/20 bg-black/60 px-4 py-2 text-xs text-purple-300 backdrop-blur-md">
-                      Scanning for QR code...
+                    <div className="pointer-events-none absolute bottom-4 left-1/2 -translate-x-1/2 rounded-full border border-purple-500/30 bg-black/75 px-4 py-1.5 text-xs font-semibold text-purple-300 backdrop-blur-md shadow-lg z-30 flex items-center gap-2">
+                      <span className="h-2 w-2 rounded-full bg-emerald-400 animate-pulse" />
+                      Arahkan QR Code tiket ke kamera
                     </div>
                   </>
                 )}
               </div>
 
-              {/* ERROR */}
-
-              {error && (
-                <div className="mt-4 rounded-xl border border-red-500/20 bg-red-950/30 px-4 py-3 text-sm leading-5 text-red-400">
-                  {error}
+              {/* PESAN ERROR IZIN / KAMERA */}
+              {cameraError && (
+                <div className="mt-4 flex items-start gap-3 rounded-xl border border-red-500/30 bg-red-950/30 p-3.5 text-xs sm:text-sm text-red-300 leading-relaxed animate-in fade-in">
+                  <AlertTriangle size={18} className="shrink-0 text-red-400 mt-0.5" />
+                  <div>
+                    <strong className="block font-semibold text-red-200">
+                      Kendala Kamera:
+                    </strong>
+                    <span>{cameraError}</span>
+                  </div>
                 </div>
               )}
 
-              {/* STARTt / STOP */}
-
-              {!scanning ? (
+              {/* 3 TOMBOL UTAMA: MULAI SCAN, BERHENTI SCAN, GANTI KAMERA */}
+              <div className="mt-5 grid grid-cols-1 sm:grid-cols-3 gap-2.5">
+                {/* 1. MULAI SCAN */}
                 <button
-                  onClick={startScan}
-                  className="mt-4 flex h-12 w-full items-center justify-center gap-2 rounded-xl border border-purple-500/30 bg-gradient-to-r from-purple-800 to-purple-950 text-sm font-bold text-white shadow-lg shadow-purple-950/30 transition hover:from-purple-700 hover:to-purple-900"
+                  onClick={() => startScanner()}
+                  disabled={scanning}
+                  className={`flex h-12 items-center justify-center gap-2 rounded-xl text-sm font-bold shadow-lg transition active:scale-[0.98] ${
+                    scanning
+                      ? "bg-zinc-800 text-zinc-500 cursor-not-allowed border border-white/[0.04]"
+                      : "bg-gradient-to-r from-purple-600 to-violet-700 text-white hover:from-purple-500 hover:to-violet-600 shadow-purple-950/50"
+                  }`}
                 >
                   <ScanLine size={18} />
-                  Start Scan
+                  Mulai Scan
                 </button>
-              ) : (
+
+                {/* 2. BERHENTI SCAN */}
                 <button
-                  onClick={stopScan}
-                  className="mt-4 flex h-12 w-full items-center justify-center gap-2 rounded-xl border border-red-500/30 bg-red-950/40 text-sm font-bold text-red-400 transition hover:bg-red-950/70"
+                  onClick={stopScanner}
+                  disabled={!scanning}
+                  className={`flex h-12 items-center justify-center gap-2 rounded-xl text-sm font-bold transition active:scale-[0.98] ${
+                    !scanning
+                      ? "bg-zinc-800 text-zinc-500 cursor-not-allowed border border-white/[0.04]"
+                      : "border border-red-500/40 bg-red-950/50 text-red-300 hover:bg-red-900/60"
+                  }`}
                 >
                   <X size={18} />
-                  Stop Camera
+                  Berhenti Scan
                 </button>
-              )}
+
+                {/* 3. GANTI KAMERA */}
+                <button
+                  onClick={handleSwitchCamera}
+                  className="flex h-12 items-center justify-center gap-2 rounded-xl border border-white/[0.08] bg-white/[0.04] text-sm font-bold text-zinc-200 transition hover:bg-white/[0.08] hover:text-white active:scale-[0.98]"
+                  title="Ganti ke kamera depan / belakang atau webcam eksternal"
+                >
+                  <SwitchCamera size={18} />
+                  Ganti Kamera
+                </button>
+              </div>
+
+              {/* FITUR TAMBAHAN: UNGGAH FILE GAMBAR QR */}
+              <div className="mt-3 flex items-center justify-between border-t border-white/[0.06] pt-3 text-xs text-zinc-400">
+                <span className="flex items-center gap-1.5">
+                  <ImageIcon size={14} className="text-purple-400" />
+                  Punya file gambar QR tiket?
+                </span>
+
+                <label className="flex items-center gap-1.5 cursor-pointer rounded-lg border border-purple-500/30 bg-purple-950/30 px-3 py-1.5 text-xs font-semibold text-purple-300 transition hover:bg-purple-900/50 hover:text-white">
+                  <Upload size={13} />
+                  <span>Scan dari File Gambar</span>
+                  <input
+                    ref={fileInputRef}
+                    type="file"
+                    accept="image/*"
+                    onChange={handleFileUploadScan}
+                    className="hidden"
+                  />
+                </label>
+              </div>
             </section>
 
             {/* =================================================
-                RIGHT COLUMN
+                KOLOM KANAN: HASIL SCAN & DETAIL TIKET
             ================================================= */}
+            <div className="flex flex-col gap-6">
+              {/* HASIL PEMINDAIAN & STATUS PESAN */}
+              {scanStatus && (
+                <div
+                  className={`rounded-2xl border p-4 sm:p-5 shadow-xl animate-in fade-in slide-in-from-top-2 duration-200 ${
+                    scanStatus.type === "success"
+                      ? "border-emerald-500/40 bg-emerald-950/30"
+                      : scanStatus.type === "used"
+                      ? "border-amber-500/40 bg-amber-950/30"
+                      : "border-red-500/40 bg-red-950/30"
+                  }`}
+                >
+                  <div className="flex items-start gap-3.5">
+                    {scanStatus.type === "success" && (
+                      <CheckCircle2
+                        size={24}
+                        className="text-emerald-400 shrink-0 mt-0.5"
+                      />
+                    )}
+                    {scanStatus.type === "used" && (
+                      <AlertTriangle
+                        size={24}
+                        className="text-amber-400 shrink-0 mt-0.5"
+                      />
+                    )}
+                    {scanStatus.type === "invalid" && (
+                      <XCircle
+                        size={24}
+                        className="text-red-400 shrink-0 mt-0.5"
+                      />
+                    )}
 
-            <div className="flex flex-col gap-5">
-              {/* MANUAL LOOKUP */}
+                    <div className="min-w-0 flex-1">
+                      <div className="flex flex-wrap items-center justify-between gap-2">
+                        <h3
+                          className={`text-base sm:text-lg font-bold ${
+                            scanStatus.type === "success"
+                              ? "text-emerald-200"
+                              : scanStatus.type === "used"
+                              ? "text-amber-200"
+                              : "text-red-200"
+                          }`}
+                        >
+                          {scanStatus.message}
+                        </h3>
 
-              <section className="rounded-2xl border border-white/[0.04] bg-[#05040d]/90 p-5 shadow-2xl shadow-black/30 backdrop-blur-xl">
-                <h2 className="mb-4 text-[16px] font-semibold text-zinc-200">
-                  Manual Ticket Lookup
-                </h2>
+                        <span
+                          className={`rounded-full border px-2.5 py-0.5 text-[11px] font-bold uppercase tracking-wider ${
+                            scanStatus.type === "success"
+                              ? "border-emerald-500/40 bg-emerald-950/60 text-emerald-400"
+                              : scanStatus.type === "used"
+                              ? "border-amber-500/40 bg-amber-950/60 text-amber-400"
+                              : "border-red-500/40 bg-red-950/60 text-red-400"
+                          }`}
+                        >
+                          {scanStatus.type}
+                        </span>
+                      </div>
+
+                      <p className="mt-1 text-xs sm:text-sm text-zinc-300 leading-relaxed">
+                        {scanStatus.detail}
+                      </p>
+
+                      {scannedRawText && (
+                        <div className="mt-2.5 inline-flex items-center gap-2 rounded-lg bg-black/40 px-3 py-1 font-mono text-xs text-purple-300 border border-white/[0.06]">
+                          <span>Kode: {scannedRawText}</span>
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              {/* INPUT MANUAL ID TIKET */}
+              <section className="rounded-2xl border border-white/[0.06] bg-[#0c0a1a]/90 p-5 shadow-2xl backdrop-blur-xl">
+                <div className="flex items-center justify-between mb-3">
+                  <h2 className="text-[15px] font-bold text-zinc-200 flex items-center gap-2">
+                    <Search size={16} className="text-purple-400" />
+                    Input Manual ID Tiket
+                  </h2>
+                  <span className="text-[11px] text-zinc-500">Ketik & Enter</span>
+                </div>
 
                 <div className="flex gap-2">
                   <input
                     type="text"
                     value={manualId}
-                    onChange={(e) => {
-                      setManualId(e.target.value);
-                      setError("");
-                    }}
+                    onChange={(e) => setManualId(e.target.value)}
                     onKeyDown={(e) => {
                       if (e.key === "Enter") {
-                        verifyTicket();
+                        handleManualVerify();
                       }
                     }}
-                    placeholder="e.g. TCKT-CELE-001-A12"
-                    className="h-11 min-w-0 flex-1 rounded-xl border border-purple-900/30 bg-black/40 px-4 text-sm text-zinc-200 outline-none placeholder:text-zinc-600 focus:border-purple-500/50"
+                    placeholder="Contoh: NOCT-2026-TS-001"
+                    className="h-11 min-w-0 flex-1 rounded-xl border border-white/[0.08] bg-black/40 px-4 text-sm text-zinc-100 placeholder:text-zinc-600 outline-none focus:border-purple-500 font-mono uppercase"
                   />
 
                   <button
-                    onClick={verifyTicket}
-                    className="flex h-11 shrink-0 items-center gap-2 rounded-xl border border-indigo-500/30 bg-indigo-950/80 px-5 text-sm font-bold text-zinc-200 transition hover:bg-indigo-900"
+                    onClick={handleManualVerify}
+                    className="flex h-11 shrink-0 items-center gap-2 rounded-xl bg-gradient-to-r from-purple-700 to-violet-800 px-5 text-sm font-bold text-white transition hover:from-purple-600 hover:to-violet-700 active:scale-95 shadow-md shadow-purple-950/40"
                   >
-                    <Search size={17} />
-                    Verify
+                    <Search size={16} />
+                    Verifikasi
                   </button>
                 </div>
               </section>
 
-              {/* TICKET DETAILS */}
+              {/* DETAIL INFORMASI TIKET */}
+              <section className="flex-1 rounded-2xl border border-white/[0.06] bg-[#0c0a1a]/90 p-5 sm:p-6 shadow-2xl backdrop-blur-xl">
+                <div className="flex items-center justify-between mb-4 border-b border-white/[0.06] pb-3">
+                  <h2 className="text-[16px] font-bold text-zinc-100 flex items-center gap-2">
+                    <Ticket size={18} className="text-purple-400" />
+                    Informasi Tiket
+                  </h2>
 
-              <section className="min-h-[430px] flex-1 rounded-2xl border border-white/[0.04] bg-[#05040d]/90 p-5 shadow-2xl shadow-black/30 backdrop-blur-xl">
-                <h2 className="mb-4 text-[16px] font-semibold text-zinc-200">
-                  Ticket Details
-                </h2>
+                  {matchedTicket && (
+                    <button
+                      onClick={() => resetTicketStatus(matchedTicket.id)}
+                      className="text-[11px] text-purple-400 hover:text-purple-300 underline font-semibold"
+                      title="Reset status tiket agar bisa dites ulang"
+                    >
+                      Reset Tiket Ini (Uji Ulang)
+                    </button>
+                  )}
+                </div>
 
-                {!ticket ? (
-                  <div className="flex h-[350px] flex-col items-center justify-center text-center">
-                    <div className="mb-5 flex h-14 w-14 items-center justify-center rounded-full bg-black/30">
-                      <Ticket
-                        size={25}
-                        strokeWidth={1.5}
-                        className="text-zinc-600"
-                      />
+                {!matchedTicket ? (
+                  <div className="flex h-[260px] flex-col items-center justify-center text-center p-4">
+                    <div className="mb-4 flex h-14 w-14 items-center justify-center rounded-2xl bg-black/40 border border-white/[0.06] text-zinc-600">
+                      <Ticket size={28} strokeWidth={1.5} />
                     </div>
-
-                    <p className="text-[16px] font-medium text-zinc-500">
-                      No ticket scanned yet
+                    <p className="text-base font-semibold text-zinc-400">
+                      Belum Ada Tiket Terpindai
                     </p>
-
-                    <p className="mt-1 max-w-[280px] text-sm leading-5 text-zinc-600">
-                      Scan a QR code or enter a ticket ID to view attendee
-                      details here.
+                    <p className="mt-1 max-w-[280px] text-xs text-zinc-500 leading-relaxed">
+                      Arahkan kamera ke QR Code tiket, unggah file gambar QR, atau ketikkan ID tiket pada kolom di atas.
                     </p>
                   </div>
                 ) : (
-                  <div>
-                    {/* STATUS */}
-
-                    <div className="mb-5 flex items-center justify-between rounded-xl border border-emerald-500/20 bg-emerald-950/20 px-4 py-3">
-                      <div className="flex items-center gap-3">
-                        <CheckCircle2 size={20} className="text-emerald-400" />
-
+                  <div className="space-y-4">
+                    {/* STATUS BANNER */}
+                    <div
+                      className={`flex items-center justify-between rounded-xl border p-3.5 ${
+                        matchedTicket.status === "valid"
+                          ? "border-emerald-500/30 bg-emerald-950/20"
+                          : "border-amber-500/30 bg-amber-950/20"
+                      }`}
+                    >
+                      <div className="flex items-center gap-2.5">
+                        {matchedTicket.status === "valid" ? (
+                          <CheckCircle2 size={19} className="text-emerald-400" />
+                        ) : (
+                          <AlertTriangle size={19} className="text-amber-400" />
+                        )}
                         <div>
-                          <p className="text-sm font-semibold text-emerald-300">
-                            Ticket Valid
+                          <p
+                            className={`text-sm font-bold ${
+                              matchedTicket.status === "valid"
+                                ? "text-emerald-300"
+                                : "text-amber-300"
+                            }`}
+                          >
+                            {matchedTicket.status === "valid"
+                              ? "Tiket Valid (Siap Masuk Venue)"
+                              : "Tiket Sudah Digunakan"}
                           </p>
-
-                          <p className="text-xs text-emerald-500/70">
-                            Payment verified
+                          <p className="text-[11px] text-zinc-400">
+                            {matchedTicket.scannedAt
+                              ? `Waktu Scan: ${matchedTicket.scannedAt}`
+                              : "Belum pernah dipindai"}
                           </p>
                         </div>
                       </div>
 
-                      <span className="rounded-full bg-emerald-500/10 px-3 py-1 text-xs font-bold text-emerald-400">
-                        VALID
+                      <span
+                        className={`rounded-full border px-3 py-0.5 text-xs font-bold uppercase ${
+                          matchedTicket.status === "valid"
+                            ? "border-emerald-500/40 bg-emerald-950/60 text-emerald-300"
+                            : "border-amber-500/40 bg-amber-950/60 text-amber-300"
+                        }`}
+                      >
+                        {matchedTicket.status}
                       </span>
                     </div>
 
-                    {/* CUSTOMER */}
-
-                    <div className="space-y-4">
-                      {/* ATTENDEE */}
-
-                      <div className="flex items-start gap-3">
-                        <User size={18} className="mt-0.5 text-purple-400" />
-
-                        <div>
-                          <p className="text-xs text-zinc-600">Attendee</p>
-
-                          <p className="mt-0.5 text-sm font-semibold text-zinc-200">
-                            {ticket.customer}
-                          </p>
-
-                          <p className="text-xs text-zinc-500">
-                            {ticket.email}
-                          </p>
-                        </div>
+                    {/* DETAIL FIELD LIST */}
+                    <div className="divide-y divide-white/[0.05] rounded-xl border border-white/[0.06] bg-black/30 text-xs sm:text-sm">
+                      {/* ID TIKET */}
+                      <div className="flex items-center justify-between p-3">
+                        <span className="text-zinc-500">ID / Kode Tiket</span>
+                        <span className="font-mono font-bold text-purple-300">
+                          {matchedTicket.id}
+                        </span>
                       </div>
 
-                      {/* TICKET */}
-
-                      <div className="flex items-start gap-3">
-                        <Ticket size={18} className="mt-0.5 text-purple-400" />
-
-                        <div>
-                          <p className="text-xs text-zinc-600">Ticket</p>
-
-                          <p className="mt-0.5 text-sm font-semibold text-zinc-200">
-                            {ticket.ticketClass}
+                      {/* PEMILIK TIKET */}
+                      <div className="flex items-center justify-between p-3">
+                        <span className="text-zinc-500 flex items-center gap-1.5">
+                          <User size={14} className="text-purple-400" />
+                          Nama Pemilik
+                        </span>
+                        <div className="text-right">
+                          <p className="font-bold text-zinc-200">
+                            {matchedTicket.customer}
                           </p>
-
-                          <p className="text-xs text-zinc-500">{ticket.id}</p>
-                        </div>
-                      </div>
-
-                      {/* DATE + SEAT */}
-
-                      <div className="grid grid-cols-2 gap-4">
-                        <div className="flex items-start gap-3">
-                          <CalendarDays
-                            size={17}
-                            className="mt-0.5 text-purple-400"
-                          />
-
-                          <div>
-                            <p className="text-xs text-zinc-600">Event Date</p>
-
-                            <p className="mt-0.5 text-xs font-medium text-zinc-300">
-                              {ticket.date}
-                            </p>
-                          </div>
-                        </div>
-
-                        <div className="flex items-start gap-3">
-                          <MapPin
-                            size={17}
-                            className="mt-0.5 text-purple-400"
-                          />
-
-                          <div>
-                            <p className="text-xs text-zinc-600">Seat</p>
-
-                            <p className="mt-0.5 text-xs font-medium text-zinc-300">
-                              {ticket.seat}
-                            </p>
-                          </div>
-                        </div>
-                      </div>
-
-                      {/* VENUE */}
-
-                      <div className="flex items-start gap-3">
-                        <CreditCard
-                          size={18}
-                          className="mt-0.5 text-purple-400"
-                        />
-
-                        <div>
-                          <p className="text-xs text-zinc-600">Venue</p>
-
-                          <p className="mt-0.5 text-sm font-medium text-zinc-300">
-                            {ticket.venue}
+                          <p className="text-[11px] text-zinc-500">
+                            {matchedTicket.email}
                           </p>
                         </div>
                       </div>
-                    </div>
 
-                    {/* EVENT */}
+                      {/* NAMA EVENT */}
+                      <div className="flex items-center justify-between p-3">
+                        <span className="text-zinc-500">Nama Event</span>
+                        <span className="font-semibold text-zinc-200 text-right max-w-[200px] truncate">
+                          {matchedTicket.event}
+                        </span>
+                      </div>
 
-                    <div className="mt-5 rounded-xl bg-purple-950/20 px-4 py-3">
-                      <p className="text-xs text-zinc-600">Event</p>
+                      {/* KATEGORI TIKET */}
+                      <div className="flex items-center justify-between p-3">
+                        <span className="text-zinc-500 flex items-center gap-1.5">
+                          <Tag size={14} className="text-purple-400" />
+                          Kategori Tiket
+                        </span>
+                        <span className="rounded-md bg-purple-950/60 border border-purple-500/30 px-2.5 py-0.5 text-xs font-bold text-purple-300">
+                          {matchedTicket.ticketClass}
+                        </span>
+                      </div>
 
-                      <p className="mt-1 text-sm font-semibold text-purple-300">
-                        {ticket.event}
-                      </p>
+                      {/* TEMPAT DUDUK / SEAT */}
+                      <div className="flex items-center justify-between p-3">
+                        <span className="text-zinc-500">Nomor Kursi / Zona</span>
+                        <span className="font-bold text-zinc-200">
+                          {matchedTicket.seat}
+                        </span>
+                      </div>
+
+                      {/* TANGGAL & VENUE */}
+                      <div className="flex items-center justify-between p-3">
+                        <span className="text-zinc-500 flex items-center gap-1.5">
+                          <MapPin size={14} className="text-purple-400" />
+                          Lokasi & Tanggal
+                        </span>
+                        <div className="text-right">
+                          <p className="font-medium text-zinc-200">
+                            {matchedTicket.venue}
+                          </p>
+                          <p className="text-[11px] text-zinc-500">
+                            {matchedTicket.date}
+                          </p>
+                        </div>
+                      </div>
                     </div>
                   </div>
                 )}
+              </section>
+
+              {/* CONTOH KODE TIKET UNTUK PENGUJIAN */}
+              <section className="rounded-2xl border border-white/[0.06] bg-[#0c0a1a]/70 p-4 sm:p-5 text-xs">
+                <div className="flex flex-wrap items-center justify-between gap-2 mb-3">
+                  <span className="font-bold text-purple-300 flex items-center gap-1.5">
+                    <QrCode size={15} />
+                    Contoh Kode Tiket untuk Pengujian:
+                  </span>
+
+                  <div className="flex items-center gap-2">
+                    <button
+                      onClick={resetAllTickets}
+                      className="flex items-center gap-1 text-[11px] text-zinc-400 hover:text-purple-300 font-semibold px-2 py-0.5 rounded border border-white/[0.08] hover:border-purple-500/30 transition"
+                      title="Reset semua tiket ke status Valid"
+                    >
+                      <RotateCw size={11} />
+                      Reset Semua
+                    </button>
+                    <span className="text-[11px] text-zinc-500">
+                      Klik QR untuk scan
+                    </span>
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                  {Object.values(ticketsData).map((item) => (
+                    <div
+                      key={item.id}
+                      className="group flex items-center justify-between gap-2 rounded-xl border border-white/[0.06] bg-black/40 p-2.5 transition hover:border-purple-500/40 hover:bg-purple-950/20"
+                    >
+                      <button
+                        onClick={() => {
+                          setManualId(item.id);
+                          processTicketVerification(item.id);
+                        }}
+                        className="min-w-0 flex-1 text-left"
+                        title="Klik untuk verifikasi cepat"
+                      >
+                        <p className="font-mono text-[11px] font-bold text-zinc-200 group-hover:text-purple-300 transition truncate">
+                          {item.id}
+                        </p>
+                        <p className="text-[10px] text-zinc-400 truncate">
+                          {item.customer} • {item.ticketClass}
+                        </p>
+                      </button>
+
+                      <div className="flex items-center gap-1.5 shrink-0">
+                        <button
+                          onClick={() => setQrModalTicket(item)}
+                          className="flex h-7 items-center gap-1 rounded-lg border border-purple-500/40 bg-purple-950/60 px-2 text-[10px] font-bold text-purple-300 hover:bg-purple-900/80 hover:text-white transition active:scale-95"
+                          title="Tampilkan QR Code untuk diarahkan ke kamera laptop / HP"
+                        >
+                          <QrCode size={12} />
+                          <span>QR</span>
+                        </button>
+
+                        <span
+                          className={`rounded px-1.5 py-0.5 text-[9px] font-bold uppercase ${
+                            item.status === "valid"
+                              ? "bg-emerald-500/20 text-emerald-300"
+                              : "bg-amber-500/20 text-amber-300"
+                          }`}
+                        >
+                          {item.status}
+                        </span>
+                      </div>
+                    </div>
+                  ))}
+                </div>
               </section>
             </div>
           </div>
         </div>
       </main>
+
+      {/* =========================================================
+          MODAL PREVIEW QR CODE TIKET (UNTUK TEST SCAN LANGSUNG)
+      ========================================================= */}
+      {qrModalTicket && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-md animate-in fade-in duration-200">
+          <div className="relative w-full max-w-sm rounded-3xl border border-purple-500/30 bg-[#0e0b1f] p-6 shadow-2xl shadow-purple-950/60 text-center">
+            {/* Tombol Tutup */}
+            <button
+              onClick={() => setQrModalTicket(null)}
+              className="absolute right-4 top-4 flex h-8 w-8 items-center justify-center rounded-full bg-white/[0.06] text-zinc-400 hover:bg-white/[0.12] hover:text-white transition"
+            >
+              <X size={18} />
+            </button>
+
+            <div className="mx-auto mb-3 flex h-12 w-12 items-center justify-center rounded-2xl bg-gradient-to-br from-purple-700 to-purple-950 text-white shadow-md shadow-purple-950/40">
+              <QrCode size={24} />
+            </div>
+
+            <h3 className="text-lg font-bold text-white">QR Code Tiket</h3>
+            <p className="text-xs text-zinc-400 mt-0.5">
+              Arahkan webcam laptop atau kamera HP Anda ke QR Code ini
+            </p>
+
+            {/* GAMBAR QR CODE TIKET */}
+            <div className="my-5 flex items-center justify-center rounded-2xl border-2 border-dashed border-purple-500/40 bg-white p-4 shadow-xl">
+              <img
+                src={`https://api.qrserver.com/v1/create-qr-code/?size=240x240&margin=4&data=${encodeURIComponent(
+                  qrModalTicket.id
+                )}`}
+                alt={`QR Code ${qrModalTicket.id}`}
+                className="h-52 w-52 object-contain"
+              />
+            </div>
+
+            {/* INFO TIKET */}
+            <div className="mb-4 rounded-xl border border-white/[0.08] bg-black/40 p-3 text-left text-xs space-y-1">
+              <div className="flex justify-between">
+                <span className="text-zinc-500">ID Tiket:</span>
+                <span className="font-mono font-bold text-purple-300">
+                  {qrModalTicket.id}
+                </span>
+              </div>
+              <div className="flex justify-between">
+                <span className="text-zinc-500">Nama:</span>
+                <span className="font-semibold text-zinc-200">
+                  {qrModalTicket.customer}
+                </span>
+              </div>
+              <div className="flex justify-between">
+                <span className="text-zinc-500">Event:</span>
+                <span className="text-zinc-300 max-w-[170px] truncate">
+                  {qrModalTicket.event}
+                </span>
+              </div>
+              <div className="flex justify-between">
+                <span className="text-zinc-500">Kategori:</span>
+                <span className="text-purple-400 font-semibold">
+                  {qrModalTicket.ticketClass}
+                </span>
+              </div>
+            </div>
+
+            {/* ACTION BUTTONS */}
+            <div className="flex flex-col gap-2">
+              <button
+                onClick={() => {
+                  processTicketVerification(qrModalTicket.id);
+                  setQrModalTicket(null);
+                }}
+                className="flex h-10 items-center justify-center gap-2 rounded-xl bg-gradient-to-r from-purple-600 to-violet-700 text-xs font-bold text-white shadow-lg shadow-purple-950/40 hover:from-purple-500 hover:to-violet-600 transition active:scale-95"
+              >
+                <CheckCircle2 size={15} />
+                Simulasikan Pindai Tiket Ini
+              </button>
+
+              <button
+                onClick={() => setQrModalTicket(null)}
+                className="flex h-9 items-center justify-center rounded-xl border border-white/[0.08] bg-white/[0.04] text-xs font-semibold text-zinc-300 hover:bg-white/[0.08] hover:text-white transition"
+              >
+                Tutup
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

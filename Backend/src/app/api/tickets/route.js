@@ -1,11 +1,26 @@
 import { NextResponse } from "next/server";
 import db from "@/lib/db";
+import { syncEventTicketCategories } from "@/lib/stageTemplates";
 
 // 1. GET: Ambil daftar kategori tiket berdasarkan event_id atau semua tiket
+//    Jika ada event_id, otomatis pastikan kategori selaras dengan layout panggung event tersebut.
 export async function GET(request) {
   try {
     const { searchParams } = new URL(request.url);
     const eventId = searchParams.get("event_id");
+
+    if (eventId) {
+      // Ambil stage_layout event untuk memastikan auto-sync
+      const [events] = await db.query(
+        "SELECT id, stage_layout FROM events WHERE id = ?",
+        [eventId]
+      );
+
+      if (events && events.length > 0) {
+        const layout = events[0].stage_layout || "Main Stage";
+        await syncEventTicketCategories(db, Number(eventId), layout);
+      }
+    }
 
     let query = `
       SELECT 
@@ -60,8 +75,10 @@ export async function POST(request) {
   try {
     const { event_id, name, price, quota, is_locked } = await request.json();
 
-    const cleanPrice = typeof price === "string" ? Number(price.replace(/[^0-9]/g, "")) : Number(price);
-    const cleanQuota = typeof quota === "string" ? Number(quota.replace(/[^0-9]/g, "")) : Number(quota);
+    const cleanPrice =
+      typeof price === "string" ? Number(price.replace(/[^0-9]/g, "")) : Number(price);
+    const cleanQuota =
+      typeof quota === "string" ? Number(quota.replace(/[^0-9]/g, "")) : Number(quota);
 
     if (!event_id || !name || isNaN(cleanPrice) || isNaN(cleanQuota)) {
       return NextResponse.json(
@@ -109,4 +126,3 @@ export async function POST(request) {
     );
   }
 }
-

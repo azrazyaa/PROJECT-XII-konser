@@ -22,6 +22,7 @@ import {
   Mic2,
   Plus,
   QrCode,
+  RefreshCw,
   Search,
   Settings,
   ShieldCheck,
@@ -296,173 +297,452 @@ function Topbar({ setOpen }) {
 }
 
 /* =========================================================
-   5 KATEGORI TIKET SESUAI DENAH LAYOUT PANGGUNG
+   TEMPLATE LAYOUT PANGGUNG & ZONA PENONTON (Single Source)
 ========================================================= */
 
-const STAGE_CATEGORIES = [
+const STAGE_LAYOUT_TEMPLATES = [
   {
-    name: "VIP Zone",
-    color: "#3b82f6",
-    colorName: "blue",
-    badgeClass: "bg-blue-500/15 text-blue-300 border-blue-500/40",
-    dotClass: "bg-blue-400 ring-4 ring-blue-500/20",
-    barGradient: "from-blue-600 to-cyan-400",
-    borderHover: "hover:border-blue-500/40",
-    defaultPrice: "2500000",
-    defaultQuota: "500",
-    desc: "Tepat di depan panggung utama dengan pandangan terjelas & eksklusif",
+    id: "Main Stage",
+    name: "Main Stage",
+    badge: "Arena / Stadium",
+    subtitle: "Panggung Utama Depan (End-Stage)",
+    description:
+      "Panggung proscenium standar di satu sisi venue dengan area VIP di depan panggung dan tribun bertingkat di bagian belakang.",
+    zones: [
+      {
+        name: "Stage",
+        color: "#7c3aed",
+        defaultPrice: 3500000,
+        defaultQuota: 200,
+        desc: "Area panggung utama / akses panggung VIP khusus",
+      },
+      {
+        name: "VIP Zone",
+        color: "#3b82f6",
+        defaultPrice: 2500000,
+        defaultQuota: 500,
+        desc: "Tepat di depan panggung utama dengan pandangan terjelas & eksklusif",
+      },
+      {
+        name: "CAT 1 (Side)",
+        color: "#ec4899",
+        defaultPrice: 1750000,
+        defaultQuota: 1000,
+        desc: "Sayap panggung kiri & kanan dengan angle panggung intim",
+      },
+      {
+        name: "Festival",
+        color: "#10b981",
+        defaultPrice: 950000,
+        defaultQuota: 3000,
+        desc: "Area berdiri bebas (General Standing) di bagian tengah venue",
+      },
+      {
+        name: "Tribune",
+        color: "#6366f1",
+        defaultPrice: 650000,
+        defaultQuota: 2000,
+        desc: "Tempat duduk bertingkat di bagian belakang dengan pandangan menyeluruh",
+      },
+    ],
   },
   {
-    name: "CAT 1 (Side)",
-    color: "#ec4899",
-    colorName: "pink",
-    badgeClass: "bg-pink-500/15 text-pink-300 border-pink-500/40",
-    dotClass: "bg-pink-400 ring-4 ring-pink-500/20",
-    barGradient: "from-pink-600 to-rose-400",
-    borderHover: "hover:border-pink-500/40",
-    defaultPrice: "1750000",
-    defaultQuota: "1000",
-    desc: "Sayap panggung kiri & kanan dengan angle panggung intim",
-  },
-  {
+    id: "Festival",
     name: "Festival",
-    color: "#10b981",
-    colorName: "emerald",
-    badgeClass: "bg-emerald-500/15 text-emerald-300 border-emerald-500/40",
-    dotClass: "bg-emerald-400 ring-4 ring-emerald-500/20",
-    barGradient: "from-emerald-600 to-teal-400",
-    borderHover: "hover:border-emerald-500/40",
-    defaultPrice: "950000",
-    defaultQuota: "3000",
-    desc: "Area berdiri bebas (General Standing) di bagian tengah venue",
+    badge: "Outdoor / Catwalk",
+    subtitle: "T-Stage / Extended Catwalk",
+    description:
+      "Panggung megah dengan catwalk memanjang ke tengah kerumunan penonton standing, dilengkapi B-Stage untuk interaksi maksimal.",
+    zones: [
+      {
+        name: "Main Stage & Catwalk",
+        color: "#7c3aed",
+        defaultPrice: 2000000,
+        defaultQuota: 500,
+        desc: "Akses eksklusif catwalk & B-Stage terdepan",
+      },
+      {
+        name: "Pit A & B (FOS)",
+        color: "#ec4899",
+        defaultPrice: 1500000,
+        defaultQuota: 1500,
+        desc: "Front of Stage standing pit di kiri dan kanan catwalk",
+      },
+      {
+        name: "General Admission",
+        color: "#10b981",
+        defaultPrice: 850000,
+        defaultQuota: 5000,
+        desc: "Area berdiri bebas festival di seluruh arena tengah",
+      },
+    ],
   },
   {
-    name: "Tribune",
-    color: "#6366f1",
-    colorName: "indigo",
-    badgeClass: "bg-indigo-500/15 text-indigo-300 border-indigo-500/40",
-    dotClass: "bg-indigo-400 ring-4 ring-indigo-500/20",
-    barGradient: "from-indigo-600 to-purple-400",
-    borderHover: "hover:border-indigo-500/40",
-    defaultPrice: "650000",
-    defaultQuota: "2000",
-    desc: "Tempat duduk bertingkat di bagian belakang dengan pandangan menyeluruh",
+    id: "360° Stage",
+    name: "360° Stage",
+    badge: "In-the-Round",
+    subtitle: "Panggung Tengah Melingkar 360°",
+    description:
+      "Panggung berada di titik pusat arena yang dikelilingi oleh seluruh penonton dari segala penjuru, memberikan visibilitas imersif.",
+    zones: [
+      {
+        name: "Center Stage",
+        color: "#7c3aed",
+        defaultPrice: 3000000,
+        defaultQuota: 300,
+        desc: "Panggung utama melingkar di pusat arena",
+      },
+      {
+        name: "VIP Ring (Inner)",
+        color: "#3b82f6",
+        defaultPrice: 2250000,
+        defaultQuota: 800,
+        desc: "Lingkaran terdalam mengitari langsung panggung tengah",
+      },
+      {
+        name: "CAT 1 (Outer Ring)",
+        color: "#ec4899",
+        defaultPrice: 1600000,
+        defaultQuota: 1500,
+        desc: "Lingkaran tengah dengan sudut pandang 360 derajat",
+      },
+      {
+        name: "4-Quadrant Tribunes",
+        color: "#6366f1",
+        defaultPrice: 900000,
+        defaultQuota: 4000,
+        desc: "Tribun 4 kuadran (North-W, North-E, South-W, South-E)",
+      },
+    ],
   },
   {
-    name: "Stage",
-    color: "#7c3aed",
-    colorName: "purple",
-    badgeClass: "bg-purple-500/15 text-purple-300 border-purple-500/40",
-    dotClass: "bg-purple-400 ring-4 ring-purple-500/20",
-    barGradient: "from-purple-600 to-violet-400",
-    borderHover: "hover:border-purple-500/40",
-    defaultPrice: "3500000",
-    defaultQuota: "200",
-    desc: "Area panggung utama / akses panggung VIP khusus",
+    id: "Theater",
+    name: "Theater",
+    badge: "Auditorium / Hall",
+    subtitle: "Susunan Kursi Bertingkat (Tiered)",
+    description:
+      "Panggung tertutup dengan susunan kursi akustik berjenjang (Orchestra, Mezzanine, Balcony). Cocok untuk konser intim dan musikal.",
+    zones: [
+      {
+        name: "Proscenium Stage",
+        color: "#7c3aed",
+        defaultPrice: 2800000,
+        defaultQuota: 200,
+        desc: "Panggung teater proscenium utama",
+      },
+      {
+        name: "Orchestra (Stalls)",
+        color: "#3b82f6",
+        defaultPrice: 1950000,
+        defaultQuota: 800,
+        desc: "Lantai dasar utama tepat di depan panggung teater",
+      },
+      {
+        name: "Mezzanine",
+        color: "#ec4899",
+        defaultPrice: 1400000,
+        defaultQuota: 1000,
+        desc: "Tingkat balkon tengah dengan visibilitas sempurna",
+      },
+      {
+        name: "Upper Balcony",
+        color: "#6366f1",
+        defaultPrice: 750000,
+        defaultQuota: 1500,
+        desc: "Tingkat atas tribun teater dengan pandangan luas",
+      },
+    ],
   },
 ];
 
-const getCategoryStyle = (ticketName = "") => {
-  const lower = (ticketName || "").toLowerCase();
-  if (lower.includes("vip") && !lower.includes("stage")) {
-    return STAGE_CATEGORIES[0]; // VIP Zone
+// Helper: dapatkan template berdasarkan nama layout
+const getTemplateByLayout = (layoutName) => {
+  if (!layoutName) return STAGE_LAYOUT_TEMPLATES[0];
+  const lower = layoutName.toLowerCase();
+  if (lower.includes("festival")) return STAGE_LAYOUT_TEMPLATES[1];
+  if (lower.includes("360")) return STAGE_LAYOUT_TEMPLATES[2];
+  if (lower.includes("theater") || lower.includes("teater"))
+    return STAGE_LAYOUT_TEMPLATES[3];
+  return STAGE_LAYOUT_TEMPLATES[0];
+};
+
+// Helper: Dapatkan warna dan style visual untuk kartu tiket berdasarkan nama zona & layout
+const getCategoryStyle = (ticketName = "", stageLayout = "Main Stage") => {
+  const template = getTemplateByLayout(stageLayout);
+  const lowerTicket = (ticketName || "").toLowerCase().trim();
+
+  // 1. Cari exact / substring match di template zones event saat ini
+  let matchedZone = template.zones.find(
+    (z) => z.name.toLowerCase().trim() === lowerTicket
+  );
+
+  if (!matchedZone) {
+    matchedZone = template.zones.find(
+      (z) =>
+        lowerTicket.includes(z.name.toLowerCase().trim()) ||
+        z.name.toLowerCase().trim().includes(lowerTicket)
+    );
   }
-  if (lower.includes("cat 1") || lower.includes("cat1") || lower.includes("side")) {
-    return STAGE_CATEGORIES[1]; // CAT 1 (Side)
+
+  // 2. Jika tidak ada di template saat ini, cari di semua template
+  if (!matchedZone) {
+    for (const tpl of STAGE_LAYOUT_TEMPLATES) {
+      const z = tpl.zones.find(
+        (zone) =>
+          zone.name.toLowerCase().trim() === lowerTicket ||
+          lowerTicket.includes(zone.name.toLowerCase().trim())
+      );
+      if (z) {
+        matchedZone = z;
+        break;
+      }
+    }
   }
-  if (lower.includes("fest")) {
-    return STAGE_CATEGORIES[2]; // Festival
+
+  const color = matchedZone ? matchedZone.color : "#a855f7";
+  const zoneName = matchedZone ? matchedZone.name : ticketName;
+  const desc = matchedZone ? matchedZone.desc : "";
+
+  let barGradient = "from-purple-600 to-violet-400";
+  let badgeClass = "bg-purple-500/15 text-purple-300 border-purple-500/40";
+  let borderHover = "hover:border-purple-500/40";
+
+  if (color === "#3b82f6") {
+    barGradient = "from-blue-600 to-cyan-400";
+    badgeClass = "bg-blue-500/15 text-blue-300 border-blue-500/40";
+    borderHover = "hover:border-blue-500/40";
+  } else if (color === "#ec4899") {
+    barGradient = "from-pink-600 to-rose-400";
+    badgeClass = "bg-pink-500/15 text-pink-300 border-pink-500/40";
+    borderHover = "hover:border-pink-500/40";
+  } else if (color === "#10b981") {
+    barGradient = "from-emerald-600 to-teal-400";
+    badgeClass = "bg-emerald-500/15 text-emerald-300 border-emerald-500/40";
+    borderHover = "hover:border-emerald-500/40";
+  } else if (color === "#6366f1") {
+    barGradient = "from-indigo-600 to-purple-400";
+    badgeClass = "bg-indigo-500/15 text-indigo-300 border-indigo-500/40";
+    borderHover = "hover:border-indigo-500/40";
+  } else if (color === "#7c3aed") {
+    barGradient = "from-purple-600 to-violet-400";
+    badgeClass = "bg-purple-500/15 text-purple-300 border-purple-500/40";
+    borderHover = "hover:border-purple-500/40";
   }
-  if (lower.includes("tribun")) {
-    return STAGE_CATEGORIES[3]; // Tribune
-  }
-  if (lower.includes("stage")) {
-    return STAGE_CATEGORIES[4]; // Stage
-  }
+
   return {
-    name: ticketName,
-    color: "#a855f7",
-    colorName: "purple",
-    badgeClass: "bg-purple-500/15 text-purple-300 border-purple-500/40",
-    dotClass: "bg-purple-400 ring-4 ring-purple-500/20",
-    barGradient: "from-purple-600 to-violet-400",
-    borderHover: "hover:border-purple-500/40",
+    name: zoneName,
+    color,
+    desc,
+    barGradient,
+    badgeClass,
+    borderHover,
   };
 };
 
-function TicketStageLayout({ onSelectCategory }) {
+/* =========================================================
+   DIAGRAM LAYOUT PANGGUNG ASLI SESUAI TEMPLATE
+========================================================= */
+
+function StageLayoutDiagram({ layout, isLarge = false }) {
+  const normalized = (layout || "Main Stage").toLowerCase();
+
+  // 1. FESTIVAL (Outdoor / Catwalk)
+  if (normalized.includes("festival")) {
+    return (
+      <svg
+        viewBox="0 0 200 130"
+        className={`w-full ${isLarge ? "h-48 sm:h-56" : "h-32"} transition-all`}
+      >
+        <rect x="8" y="8" width="184" height="114" rx="8" fill="#110e24" stroke="#2e2547" strokeWidth="1.2" />
+        {/* Main Stage & T-Catwalk */}
+        <rect x="42" y="14" width="116" height="18" rx="3" fill="#7c3aed" />
+        <rect x="88" y="32" width="24" height="42" fill="#7c3aed" />
+        <circle cx="100" cy="74" r="13" fill="#a855f7" />
+        <text x="100" y="26" fill="#ffffff" fontSize="8" fontWeight="bold" textAnchor="middle" letterSpacing="0.5">MAIN STAGE</text>
+        <text x="100" y="77" fill="#ffffff" fontSize="6" fontWeight="bold" textAnchor="middle">B-STAGE</text>
+        {/* Pit A (Left) & Pit B (Right) */}
+        <rect x="20" y="36" width="62" height="42" rx="3" fill="#ec4899" fillOpacity="0.35" stroke="#f472b6" strokeWidth="1" />
+        <text x="51" y="59" fill="#fbcfe8" fontSize="6.5" fontWeight="bold" textAnchor="middle">PIT A (FOS)</text>
+        <rect x="118" y="36" width="62" height="42" rx="3" fill="#ec4899" fillOpacity="0.35" stroke="#f472b6" strokeWidth="1" />
+        <text x="149" y="59" fill="#fbcfe8" fontSize="6.5" fontWeight="bold" textAnchor="middle">PIT B (FOS)</text>
+        {/* General Admission / Festival Standing */}
+        <rect x="20" y="84" width="160" height="30" rx="4" fill="#10b981" fillOpacity="0.25" stroke="#34d399" strokeWidth="1" />
+        <text x="100" y="102" fill="#a7f3d0" fontSize="7" fontWeight="bold" textAnchor="middle">GENERAL ADMISSION (STANDING)</text>
+      </svg>
+    );
+  }
+
+  // 2. 360° STAGE (In-the-Round)
+  if (normalized.includes("360")) {
+    return (
+      <svg
+        viewBox="0 0 200 130"
+        className={`w-full ${isLarge ? "h-48 sm:h-56" : "h-32"} transition-all`}
+      >
+        <rect x="8" y="8" width="184" height="114" rx="8" fill="#110e24" stroke="#2e2547" strokeWidth="1.2" />
+        {/* Center Stage */}
+        <circle cx="100" cy="65" r="17" fill="#7c3aed" stroke="#c084fc" strokeWidth="1.5" />
+        <text x="100" y="68" fill="#ffffff" fontSize="7" fontWeight="bold" textAnchor="middle">360°</text>
+        {/* Inner Ring (VIP Ring) */}
+        <circle cx="100" cy="65" r="30" fill="none" stroke="#60a5fa" strokeWidth="1.5" strokeDasharray="3,2" />
+        <text x="100" y="45" fill="#93c5fd" fontSize="5.5" fontWeight="bold" textAnchor="middle">VIP RING</text>
+        {/* Middle Ring (CAT 1 Outer Ring) */}
+        <circle cx="100" cy="65" r="44" fill="none" stroke="#f472b6" strokeWidth="1.2" />
+        <text x="100" y="117" fill="#fbcfe8" fontSize="5" textAnchor="middle">CAT 1 OUTER RING</text>
+        {/* 4 Quadrants Tribunes */}
+        <path d="M 22 18 L 74 18 L 68 38 L 22 38 Z" fill="#6366f1" fillOpacity="0.3" stroke="#818cf8" strokeWidth="0.8" />
+        <text x="46" y="30" fill="#c7d2fe" fontSize="6" textAnchor="middle">NORTH-W</text>
+        <path d="M 126 18 L 178 18 L 178 38 L 132 38 Z" fill="#6366f1" fillOpacity="0.3" stroke="#818cf8" strokeWidth="0.8" />
+        <text x="154" y="30" fill="#c7d2fe" fontSize="6" textAnchor="middle">NORTH-E</text>
+        <path d="M 22 92 L 68 92 L 74 112 L 22 112 Z" fill="#6366f1" fillOpacity="0.3" stroke="#818cf8" strokeWidth="0.8" />
+        <text x="46" y="104" fill="#c7d2fe" fontSize="6" textAnchor="middle">SOUTH-W</text>
+        <path d="M 132 92 L 178 92 L 178 112 L 126 112 Z" fill="#6366f1" fillOpacity="0.3" stroke="#818cf8" strokeWidth="0.8" />
+        <text x="154" y="104" fill="#c7d2fe" fontSize="6" textAnchor="middle">SOUTH-E</text>
+      </svg>
+    );
+  }
+
+  // 3. THEATER (Auditorium / Tiered)
+  if (normalized.includes("theater") || normalized.includes("teater")) {
+    return (
+      <svg
+        viewBox="0 0 200 130"
+        className={`w-full ${isLarge ? "h-48 sm:h-56" : "h-32"} transition-all`}
+      >
+        <rect x="8" y="8" width="184" height="114" rx="8" fill="#110e24" stroke="#2e2547" strokeWidth="1.2" />
+        {/* Proscenium Stage */}
+        <path d="M 38 14 L 162 14 L 152 30 L 48 30 Z" fill="#7c3aed" />
+        <text x="100" y="24" fill="#ffffff" fontSize="7.5" fontWeight="bold" textAnchor="middle">THEATER STAGE</text>
+        {/* Orchestra / Stalls */}
+        <path d="M 44 36 L 156 36 L 160 62 L 40 62 Z" fill="#3b82f6" fillOpacity="0.3" stroke="#60a5fa" strokeWidth="1" />
+        <text x="100" y="51" fill="#bfdbfe" fontSize="6.5" fontWeight="bold" textAnchor="middle">ORCHESTRA (STALLS)</text>
+        {/* Mezzanine */}
+        <path d="M 34 68 L 166 68 L 170 86 L 30 86 Z" fill="#ec4899" fillOpacity="0.3" stroke="#f472b6" strokeWidth="1" />
+        <text x="100" y="79" fill="#fbcfe8" fontSize="6.5" textAnchor="middle">MEZZANINE TIER</text>
+        {/* Balcony */}
+        <path d="M 24 92 L 176 92 L 180 112 L 20 112 Z" fill="#6366f1" fillOpacity="0.25" stroke="#818cf8" strokeWidth="1" />
+        <text x="100" y="104" fill="#c7d2fe" fontSize="6.5" textAnchor="middle">UPPER BALCONY</text>
+      </svg>
+    );
+  }
+
+  // 4. MAIN STAGE (End-Stage / Arena Stadium)
   return (
-    <div className="rounded-2xl border border-white/[0.08] bg-[#090717]/90 p-5 shadow-2xl backdrop-blur-md">
-      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 border-b border-white/[0.06] pb-4 mb-4">
+    <svg
+      viewBox="0 0 200 130"
+      className={`w-full ${isLarge ? "h-48 sm:h-56" : "h-32"} transition-all`}
+    >
+      <rect x="8" y="8" width="184" height="114" rx="8" fill="#110e24" stroke="#2e2547" strokeWidth="1.2" />
+      {/* Stage */}
+      <rect x="52" y="14" width="96" height="22" rx="4" fill="#7c3aed" />
+      <text x="100" y="28" fill="#ffffff" fontSize="8.5" fontWeight="bold" textAnchor="middle" letterSpacing="0.8">MAIN STAGE</text>
+      {/* VIP Area */}
+      <rect x="62" y="42" width="76" height="22" rx="3" fill="#3b82f6" fillOpacity="0.35" stroke="#60a5fa" strokeWidth="1" />
+      <text x="100" y="55" fill="#bfdbfe" fontSize="7" fontWeight="bold" textAnchor="middle">VIP ZONE</text>
+      {/* CAT 1 Left & Right */}
+      <rect x="18" y="42" width="38" height="34" rx="3" fill="#ec4899" fillOpacity="0.3" stroke="#f472b6" strokeWidth="1" />
+      <text x="37" y="61" fill="#fbcfe8" fontSize="6.5" textAnchor="middle">CAT 1</text>
+      <rect x="144" y="42" width="38" height="34" rx="3" fill="#ec4899" fillOpacity="0.3" stroke="#f472b6" strokeWidth="1" />
+      <text x="163" y="61" fill="#fbcfe8" fontSize="6.5" textAnchor="middle">CAT 1</text>
+      {/* Festival */}
+      <rect x="62" y="68" width="76" height="22" rx="3" fill="#10b981" fillOpacity="0.25" stroke="#34d399" strokeWidth="1" />
+      <text x="100" y="82" fill="#a7f3d0" fontSize="6.5" textAnchor="middle">FESTIVAL</text>
+      {/* Tribune Seating */}
+      <path d="M 18 80 Q 100 110 182 80 L 182 112 Q 100 118 18 112 Z" fill="#6366f1" fillOpacity="0.25" stroke="#818cf8" strokeWidth="1" />
+      <text x="100" y="101" fill="#c7d2fe" fontSize="6.5" fontWeight="500" textAnchor="middle">TRIBUNE SEATING</text>
+    </svg>
+  );
+}
+
+/* =========================================================
+   KOMPONEN DENAH PANGGUNG DINAMIS SESUAI KONSER
+========================================================= */
+
+function TicketStageLayout({ currentEvent, onSyncTickets, syncing }) {
+  const template = getTemplateByLayout(currentEvent?.stage_layout);
+
+  return (
+    <div className="rounded-2xl border border-white/[0.08] bg-[#090717]/90 p-5 sm:p-6 shadow-2xl backdrop-blur-md">
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 border-b border-white/[0.06] pb-4 mb-5">
         <div>
-          <div className="flex items-center gap-2">
-            <span className="flex h-2 w-2 rounded-full bg-purple-400 animate-pulse" />
-            <h3 className="text-base font-bold text-zinc-100">
-              Denah Layout Panggung &amp; 5 Kategori Tiket
+          <div className="flex flex-wrap items-center gap-2.5">
+            <span className="flex h-2.5 w-2.5 rounded-full bg-purple-400 animate-pulse" />
+            <h3 className="text-base sm:text-lg font-bold text-zinc-100">
+              Denah Layout: {template.name}
             </h3>
+            <span className="rounded-md bg-purple-950/80 border border-purple-500/30 px-2.5 py-0.5 text-xs font-bold text-purple-300">
+              {template.badge}
+            </span>
           </div>
-          <p className="mt-0.5 text-xs text-zinc-400">
-            Warna kartu tiket di bawah disesuaikan dengan posisi panggung di denah. Klik tombol kategori untuk langsung tambah tiket.
+          <p className="mt-1 text-xs sm:text-sm text-zinc-400">
+            {template.subtitle} — {template.description}
           </p>
         </div>
 
-        {/* Action Quick Legend Pills */}
-        <div className="flex flex-wrap items-center gap-2">
-          {STAGE_CATEGORIES.map((cat) => (
-            <button
-              key={cat.name}
-              type="button"
-              onClick={() => onSelectCategory && onSelectCategory(cat)}
-              className="flex items-center gap-1.5 rounded-lg border border-white/[0.08] bg-black/40 px-2.5 py-1 text-[11px] font-semibold text-zinc-300 transition hover:border-purple-500/50 hover:bg-purple-950/30 active:scale-95"
-              title={`Klik untuk tambah tiket ${cat.name}`}
-            >
-              <span className="h-2.5 w-2.5 rounded-full" style={{ backgroundColor: cat.color }} />
-              <span>{cat.name}</span>
-            </button>
-          ))}
-        </div>
+        {/* Sync Button */}
+        <button
+          type="button"
+          onClick={onSyncTickets}
+          disabled={syncing}
+          className="flex items-center gap-2 rounded-xl border border-purple-500/30 bg-purple-950/40 px-3.5 py-2 text-xs font-semibold text-purple-200 transition hover:bg-purple-900/60 hover:text-white disabled:opacity-50 shrink-0"
+          title="Sinkronisasi ulang kategori tiket dengan layout panggung konser"
+        >
+          <RefreshCw size={14} className={syncing ? "animate-spin" : ""} />
+          <span>{syncing ? "Menyelaraskan..." : "Sync Layout"}</span>
+        </button>
       </div>
 
-      {/* SVG Diagram Panggung Interaktif */}
-      <div className="relative mx-auto max-w-xl overflow-hidden rounded-xl bg-[#060411]/80 p-3 border border-white/[0.04]">
-        <svg viewBox="0 0 200 130" className="w-full h-44 sm:h-52">
-          <rect x="8" y="8" width="184" height="114" rx="8" fill="#0d0a1e" stroke="#251e3a" strokeWidth="1.2" />
-          
-          {/* Main Stage */}
-          <rect x="52" y="14" width="96" height="22" rx="4" fill="#7c3aed" />
-          <text x="100" y="28" fill="#ffffff" fontSize="8.5" fontWeight="bold" textAnchor="middle" letterSpacing="0.8">
-            MAIN STAGE
-          </text>
-          
-          {/* VIP Zone */}
-          <rect x="62" y="42" width="76" height="22" rx="3" fill="#3b82f6" fillOpacity="0.4" stroke="#60a5fa" strokeWidth="1.2" />
-          <text x="100" y="55" fill="#bfdbfe" fontSize="7.5" fontWeight="bold" textAnchor="middle">
-            VIP ZONE
-          </text>
-          
-          {/* CAT 1 Left & Right */}
-          <rect x="18" y="42" width="38" height="34" rx="3" fill="#ec4899" fillOpacity="0.35" stroke="#f472b6" strokeWidth="1.2" />
-          <text x="37" y="61" fill="#fbcfe8" fontSize="6.5" fontWeight="bold" textAnchor="middle">
-            CAT 1 (L)
-          </text>
-          
-          <rect x="144" y="42" width="38" height="34" rx="3" fill="#ec4899" fillOpacity="0.35" stroke="#f472b6" strokeWidth="1.2" />
-          <text x="163" y="61" fill="#fbcfe8" fontSize="6.5" fontWeight="bold" textAnchor="middle">
-            CAT 1 (R)
-          </text>
-          
-          {/* Festival */}
-          <rect x="62" y="68" width="76" height="22" rx="3" fill="#10b981" fillOpacity="0.3" stroke="#34d399" strokeWidth="1.2" />
-          <text x="100" y="82" fill="#a7f3d0" fontSize="7" fontWeight="bold" textAnchor="middle">
-            FESTIVAL
-          </text>
-          
-          {/* Tribune */}
-          <path d="M 18 80 Q 100 110 182 80 L 182 112 Q 100 118 18 112 Z" fill="#6366f1" fillOpacity="0.3" stroke="#818cf8" strokeWidth="1.2" />
-          <text x="100" y="101" fill="#c7d2fe" fontSize="7" fontWeight="bold" textAnchor="middle">
-            TRIBUNE SEATING
-          </text>
-        </svg>
+      <div className="grid grid-cols-1 lg:grid-cols-12 gap-5 items-center">
+        {/* SVG Diagram Panggung Interaktif Sesuai Template Asli */}
+        <div className="lg:col-span-7 overflow-hidden rounded-xl bg-[#060411]/90 p-3 border border-white/[0.05] shadow-inner">
+          <StageLayoutDiagram layout={currentEvent?.stage_layout} isLarge={true} />
+        </div>
+
+        {/* Legend Zona Penonton Resmi untuk Layout Ini */}
+        <div className="lg:col-span-5 flex flex-col justify-center space-y-3">
+          <div className="flex items-center justify-between">
+            <span className="text-xs font-bold uppercase tracking-wider text-zinc-400">
+              Zona Penonton Resmi ({template.zones.length} Zona):
+            </span>
+            <span className="text-[11px] text-zinc-500">
+              Otomatis sinkron ke tiket
+            </span>
+          </div>
+
+          <div className="space-y-2">
+            {template.zones.map((zone, idx) => (
+              <div
+                key={idx}
+                className="flex items-start gap-3 rounded-xl border border-white/[0.06] bg-black/40 p-2.5 transition hover:border-purple-500/30"
+              >
+                <span
+                  className="mt-1 h-3.5 w-3.5 rounded-full shrink-0 ring-4"
+                  style={{
+                    backgroundColor: zone.color,
+                    boxShadow: `0 0 10px ${zone.color}60`,
+                  }}
+                />
+                <div className="min-w-0 flex-1">
+                  <div className="flex items-center justify-between gap-2">
+                    <span className="text-xs font-bold text-zinc-200 truncate">
+                      {zone.name}
+                    </span>
+                    <span className="text-[10px] text-purple-400 font-mono">
+                      Zona #{idx + 1}
+                    </span>
+                  </div>
+                  <p className="text-[11px] text-zinc-400 line-clamp-1 mt-0.5">
+                    {zone.desc}
+                  </p>
+                </div>
+              </div>
+            ))}
+          </div>
+
+          <p className="text-[11px] text-zinc-500 italic">
+            * Kategori tiket di bawah otomatis dibuat sesuai nama zona penonton di atas. Anda cukup mengatur harga dan kuotanya.
+          </p>
+        </div>
       </div>
     </div>
   );
@@ -481,9 +761,10 @@ export default function TicketPage() {
   const [selectedEventId, setSelectedEventId] = useState(null);
   const [searchQuery, setSearchQuery] = useState("");
 
-  // Tickets state (Loaded directly from Database via Backend API)
+  // Tickets state
   const [tickets, setTickets] = useState([]);
   const [loadingTickets, setLoadingTickets] = useState(false);
+  const [syncingTickets, setSyncingTickets] = useState(false);
 
   // Modals state
   const [showAddModal, setShowAddModal] = useState(false);
@@ -575,7 +856,38 @@ export default function TicketPage() {
   }, []);
 
   /* =====================================================
-     2. FETCH EVENTS DARI DATABASE (GET /api/events)
+     2. SYNC TICKETS SECARA EKSPLISIT DENGAN LAYOUT PANGGUNG
+  ===================================================== */
+
+  const handleSyncTickets = async () => {
+    if (!selectedEventId) return;
+    setSyncingTickets(true);
+    try {
+      const token = getToken();
+      const res = await fetch(`/api/events/${selectedEventId}/sync-tickets`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          ...(token ? { Authorization: `Bearer ${token}` } : {}),
+        },
+      });
+      const data = await res.json();
+      if (data.success) {
+        showToast(data.message || "Kategori tiket berhasil diselaraskan dengan layout!");
+        await fetchTicketsForEvent(selectedEventId);
+      } else {
+        showToast(data.message || "Gagal menyelaraskan kategori tiket", "warning");
+      }
+    } catch (err) {
+      console.error("Error syncing tickets:", err);
+      showToast("Terjadi kesalahan saat menyelaraskan tiket", "warning");
+    } finally {
+      setSyncingTickets(false);
+    }
+  };
+
+  /* =====================================================
+     3. FETCH EVENTS DARI DATABASE (GET /api/events)
   ===================================================== */
 
   useEffect(() => {
@@ -594,31 +906,9 @@ export default function TicketPage() {
         let eventList = [];
         if (data.success && Array.isArray(data.data) && data.data.length > 0) {
           eventList = data.data;
-        } else {
-          // Fallback events
-          eventList = [
-            {
-              id: 4,
-              title: "uauaua editedvv",
-              venue: "hahaha edited",
-              event_date: "2026-10-25T17:00:00.000Z",
-              artist_name: "Taylor Swift",
-              is_closed: 0,
-            },
-            {
-              id: 6,
-              title: "naira konser",
-              venue: "depok",
-              event_date: "2027-01-07T17:00:00.000Z",
-              artist_name: "Coldplay",
-              is_closed: 0,
-            },
-          ];
         }
 
         setEvents(eventList);
-
-        // Jangan auto-select event pertama, biarkan admin memilih konser terlebih dahulu
       } catch (err) {
         console.error("Error loading events:", err);
       } finally {
@@ -627,7 +917,7 @@ export default function TicketPage() {
     };
 
     fetchEvents();
-  }, [fetchTicketsForEvent]);
+  }, []);
 
   // Handler saat admin memilih event card
   const handleSelectEvent = (eventId) => {
@@ -642,10 +932,11 @@ export default function TicketPage() {
     const titleMatch = evt.title?.toLowerCase().includes(q);
     const venueMatch = evt.venue?.toLowerCase().includes(q);
     const artistMatch = evt.artist_name?.toLowerCase().includes(q);
-    return titleMatch || venueMatch || artistMatch;
+    const layoutMatch = evt.stage_layout?.toLowerCase().includes(q);
+    return titleMatch || venueMatch || artistMatch || layoutMatch;
   });
 
-  // Active event object - hanya aktif jika ada konser yang dipilih
+  // Active event object
   const currentEvent =
     events.find((e) => e.id === selectedEventId) || null;
 
@@ -657,8 +948,8 @@ export default function TicketPage() {
     if (preset) {
       setAddForm({
         name: preset.name,
-        price: preset.defaultPrice || "",
-        quota: preset.defaultQuota || "",
+        price: preset.defaultPrice ? String(preset.defaultPrice) : "",
+        quota: preset.defaultQuota ? String(preset.defaultQuota) : "",
       });
     } else {
       setAddForm({
@@ -883,7 +1174,7 @@ export default function TicketPage() {
   };
 
   /* =====================================================
-     ACTIONS: LOCK SALES / UNLOCK SALES (PUT /api/tickets/[id])
+     ACTIONS: LOCK / UNLOCK SALES (PUT /api/tickets/[id])
   ===================================================== */
 
   const toggleLockSales = async (ticketId) => {
@@ -973,6 +1264,9 @@ export default function TicketPage() {
     }
   };
 
+  // Template untuk event yang sedang aktif
+  const currentTemplate = getTemplateByLayout(currentEvent?.stage_layout);
+
   return (
     <div className="min-h-screen bg-[#080612] text-zinc-200">
       {/* TOAST NOTIFICATION */}
@@ -1007,21 +1301,18 @@ export default function TicketPage() {
         </div>
 
         <div className="relative mx-auto max-w-[1500px] px-5 py-8 sm:px-8 lg:px-7 xl:px-8">
-          {/* =================================================
-              PAGE HEADER
-          ================================================= */}
+          {/* PAGE HEADER */}
           <div className="mb-8">
             <h1 className="text-[28px] font-bold tracking-tight text-zinc-100">
               Ticket Classes & Quota
             </h1>
             <p className="mt-1 text-sm text-zinc-400">
-              Kelola kategori tiket, harga, kuota, serta status penjualan tiket langsung tersimpan ke database.
+              Kategori tiket otomatis diselaraskan dengan template layout panggung konser yang dipilih. Atur harga dan kuota tiket dengan mudah.
             </p>
           </div>
 
           {/* =================================================
               EVENT SELECTOR SECTION (CARDS)
-              "Select an event to manage its ticket categories and quota"
           ================================================= */}
           <div className="mb-10 rounded-2xl border border-white/[0.06] bg-[#0c0a1a]/80 p-5 shadow-2xl backdrop-blur-sm sm:p-6">
             <div className="mb-4 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
@@ -1031,11 +1322,11 @@ export default function TicketPage() {
                     1
                   </span>
                   <h2 className="text-[17px] font-bold text-zinc-100">
-                    Select an event to manage its ticket categories and quota
+                    Pilih Konser untuk Mengelola Kelas Tiket & Denah Panggung
                   </h2>
                 </div>
                 <p className="mt-1 text-xs text-zinc-400">
-                  Pilih salah satu kartu event di bawah ini untuk mengelola kelas tiket dan kuotanya.
+                  Setiap konser memiliki template denah layout panggung & zona penonton yang berbeda (Main Stage, Festival, 360° Stage, Theater).
                 </p>
               </div>
 
@@ -1053,7 +1344,7 @@ export default function TicketPage() {
                 />
                 <input
                   type="text"
-                  placeholder="Cari event konser berdasarkan nama, venue, atau artis..."
+                  placeholder="Cari konser berdasarkan judul, venue, artis, atau layout panggung..."
                   value={searchQuery}
                   onChange={(e) => setSearchQuery(e.target.value)}
                   className="h-11 w-full rounded-xl border border-white/[0.08] bg-black/40 pl-11 pr-10 text-sm text-zinc-100 placeholder:text-zinc-500 outline-none transition focus:border-purple-500 focus:bg-black/60 focus:ring-1 focus:ring-purple-500/40"
@@ -1114,8 +1405,8 @@ export default function TicketPage() {
               <div className="grid grid-cols-1 gap-3.5 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
                 {filteredEvents.map((evt) => {
                   const isSelected = selectedEventId === evt.id;
+                  const tpl = getTemplateByLayout(evt.stage_layout);
                   
-                  // Status badge text & color
                   let statusLabel = "Active";
                   let statusBg = "bg-emerald-500/10 text-emerald-400 border-emerald-500/30";
                   if (evt.is_closed === 1) {
@@ -1156,16 +1447,24 @@ export default function TicketPage() {
                         {evt.title}
                       </h3>
 
-                      {/* VENUE */}
-                      <div className="mt-2 flex items-center gap-2 text-xs text-zinc-400">
-                        <MapPin size={13} className="shrink-0 text-zinc-500" />
-                        <span className="truncate">{evt.venue || "Venue TBA"}</span>
+                      {/* LAYOUT BADGE */}
+                      <div className="mt-2 flex items-center gap-2">
+                        <span className="inline-flex items-center gap-1 rounded-md bg-purple-950/70 border border-purple-500/30 px-2 py-0.5 text-[10.5px] font-semibold text-purple-300">
+                          <Layers size={11} />
+                          {tpl.name} ({tpl.badge})
+                        </span>
                       </div>
 
-                      {/* DATE */}
-                      <div className="mt-1.5 flex items-center gap-2 text-xs text-zinc-400">
-                        <Calendar size={13} className="shrink-0 text-zinc-500" />
-                        <span>{formatDate(evt.event_date)}</span>
+                      {/* VENUE & DATE */}
+                      <div className="mt-2 space-y-1 text-xs text-zinc-400">
+                        <div className="flex items-center gap-1.5">
+                          <MapPin size={12} className="shrink-0 text-zinc-500" />
+                          <span className="truncate">{evt.venue || "Venue TBA"}</span>
+                        </div>
+                        <div className="flex items-center gap-1.5">
+                          <Calendar size={12} className="shrink-0 text-zinc-500" />
+                          <span>{formatDate(evt.event_date)}</span>
+                        </div>
                       </div>
 
                       {/* FOOTER INFO */}
@@ -1181,7 +1480,7 @@ export default function TicketPage() {
                               : "bg-purple-950/40 text-purple-300 border border-purple-500/30 group-hover:bg-purple-900/60"
                           }`}
                         >
-                          {isSelected ? "Sedang Dikelola ✓" : "Kelola Tiket →"}
+                          {isSelected ? "Dikelola ✓" : "Pilih Konser →"}
                         </span>
                       </div>
                     </div>
@@ -1203,7 +1502,7 @@ export default function TicketPage() {
                 Pilih Konser Terlebih Dahulu
               </h3>
               <p className="mt-1.5 max-w-md text-sm text-zinc-400">
-                Klik salah satu kartu konser di atas untuk membuka denah panggung dan mulai menambah atau mengatur 5 kategori tiket (Stage, VIP Zone, CAT 1 (Side), Festival, Tribune).
+                Klik salah satu kartu konser di atas untuk menampilkan denah panggung yang sesuai dan mengelola kelas tiket beserta kuotanya.
               </p>
             </div>
           ) : (
@@ -1218,27 +1517,60 @@ export default function TicketPage() {
                   <h2 className="mt-1 text-xl sm:text-2xl font-bold text-zinc-100">
                     {currentEvent.title}
                   </h2>
-                  <p className="mt-0.5 text-xs sm:text-sm text-zinc-400">
-                    Lokasi: <span className="text-zinc-300">{currentEvent.venue || "Venue TBA"}</span> • Tanggal:{" "}
-                    <span className="text-zinc-300">{formatDate(currentEvent.event_date)}</span>
-                  </p>
+                  <div className="mt-1 flex flex-wrap items-center gap-3 text-xs sm:text-sm text-zinc-400">
+                    <span>
+                      Lokasi: <strong className="text-zinc-200">{currentEvent.venue || "Venue TBA"}</strong>
+                    </span>
+                    <span className="text-zinc-600">•</span>
+                    <span>
+                      Tanggal: <strong className="text-zinc-200">{formatDate(currentEvent.event_date)}</strong>
+                    </span>
+                    <span className="text-zinc-600">•</span>
+                    <span>
+                      Layout Panggung:{" "}
+                      <strong className="text-purple-300">
+                        {currentTemplate.name} ({currentTemplate.badge})
+                      </strong>
+                    </span>
+                  </div>
                 </div>
 
-                {/* + ADD TICKET CATEGORY BUTTON */}
+                {/* Quick Add Custom Category */}
                 <button
                   onClick={() => handleOpenAddModal()}
                   className="flex items-center justify-center gap-2 rounded-xl bg-gradient-to-r from-purple-600 to-violet-700 px-5 py-3 text-sm font-bold text-white shadow-lg shadow-purple-900/40 transition hover:from-purple-500 hover:to-violet-600 active:scale-[0.98]"
+                  title="Tambah kategori tiket khusus"
                 >
                   <Plus size={18} strokeWidth={2.5} />
-                  + Add Ticket Category
+                  + Tambah Kategori Tiket
                 </button>
               </div>
 
-              {/* DENAH LAYOUT PANGGUNG DENGAN 5 KATEGORI */}
-              <TicketStageLayout onSelectCategory={(cat) => handleOpenAddModal(cat)} />
+              {/* DENAH LAYOUT PANGGUNG ASLI SESUAI TEMPLATE KONSER */}
+              <TicketStageLayout
+                currentEvent={currentEvent}
+                onSyncTickets={handleSyncTickets}
+                syncing={syncingTickets}
+              />
 
               {/* TICKET CATEGORIES LIST */}
               <div className="space-y-4">
+                <div className="flex items-center justify-between px-1">
+                  <div>
+                    <h3 className="text-lg font-bold text-zinc-100 flex items-center gap-2">
+                      <Tag size={18} className="text-purple-400" />
+                      Daftar Kategori Tiket
+                    </h3>
+                    <p className="text-xs text-zinc-400">
+                      Seluruh kategori tiket telah disinkronkan otomatis sesuai zona layout {currentTemplate.name}.
+                    </p>
+                  </div>
+
+                  <span className="text-xs font-semibold text-zinc-400">
+                    Total: <strong className="text-purple-300">{tickets.length}</strong> Kategori
+                  </span>
+                </div>
+
                 {loadingTickets ? (
                   <div className="flex h-36 flex-col items-center justify-center rounded-2xl border border-white/[0.04] bg-[#070512]/60 gap-3 text-sm text-zinc-400">
                     <Loader2 size={24} className="animate-spin text-purple-400" />
@@ -1247,20 +1579,29 @@ export default function TicketPage() {
                 ) : tickets.length === 0 ? (
                   <div className="flex flex-col items-center justify-center rounded-2xl border border-dashed border-white/10 bg-[#070512]/50 py-12 text-center text-zinc-500">
                     <Tag size={36} className="mb-2 text-zinc-600" />
-                    <p className="font-semibold text-zinc-300">Belum ada kategori tiket di database untuk konser ini</p>
-                    <p className="mt-1 text-xs text-zinc-500">
-                      Klik tombol "+ Add Ticket Category" di atas untuk menambahkan kelas tiket ke database.
+                    <p className="font-semibold text-zinc-300">
+                      Belum ada kategori tiket untuk konser ini
                     </p>
+                    <p className="mt-1 text-xs text-zinc-500 max-w-sm">
+                      Klik tombol "Sync Layout" di atas untuk otomatis membuat tiket sesuai zona panggung layout {currentTemplate.name}.
+                    </p>
+                    <button
+                      onClick={handleSyncTickets}
+                      className="mt-3 rounded-lg border border-purple-500/40 bg-purple-950/50 px-4 py-2 text-xs font-bold text-purple-300 transition hover:bg-purple-900/60"
+                    >
+                      Sync Kategori dari Denah Sekarang
+                    </button>
                   </div>
                 ) : (
                   tickets.map((ticket) => {
-                    const catStyle = getCategoryStyle(ticket.name);
+                    const catStyle = getCategoryStyle(ticket.name, currentEvent.stage_layout);
                     const remaining = Math.max(0, ticket.quota - (ticket.sold || 0));
                     const percentage =
                       ticket.quota > 0
                         ? Math.min(100, Math.round(((ticket.sold || 0) / ticket.quota) * 100))
                         : 0;
-                    const isAlmostFull = percentage >= 80;
+
+                    const isUnset = ticket.price <= 0 || ticket.quota <= 0;
 
                     return (
                       <div
@@ -1268,6 +1609,8 @@ export default function TicketPage() {
                         className={`rounded-2xl border p-5 sm:p-6 shadow-xl transition-all duration-200 ${
                           ticket.locked
                             ? "border-amber-500/20 bg-[#090714]/90"
+                            : isUnset
+                            ? "border-purple-500/40 bg-[#0a071a]/95 ring-1 ring-purple-500/30"
                             : `border-white/[0.06] bg-[#070512]/90 ${catStyle.borderHover}`
                         }`}
                       >
@@ -1282,7 +1625,7 @@ export default function TicketPage() {
                                   backgroundColor: catStyle.color,
                                   boxShadow: `0 0 10px ${catStyle.color}80`,
                                 }}
-                                title={`Zona Layout: ${catStyle.name || ticket.name}`}
+                                title={`Zona: ${catStyle.name}`}
                               />
 
                               <h3 className="text-[18px] font-bold text-zinc-100">
@@ -1307,11 +1650,17 @@ export default function TicketPage() {
                                   Sales Open
                                 </span>
                               )}
+
+                              {isUnset && (
+                                <span className="rounded-full border border-purple-500/40 bg-purple-950/60 px-2.5 py-0.5 text-[11px] font-bold text-purple-300 animate-pulse">
+                                  ⚠️ Perlu atur harga / kuota
+                                </span>
+                              )}
                             </div>
 
                             {/* PRICE, QUOTA & REMAINING DETAILS */}
                             <div className="mt-2.5 flex flex-wrap items-center gap-3 text-sm text-zinc-400">
-                              <span className="font-bold text-purple-300">
+                              <span className="font-bold text-purple-300 text-base">
                                 {formatPrice(ticket.price)}
                               </span>
 
@@ -1321,7 +1670,8 @@ export default function TicketPage() {
                                 Quota:{" "}
                                 <strong className="font-semibold text-zinc-200">
                                   {Number(ticket.quota).toLocaleString("id-ID")}
-                                </strong>
+                                </strong>{" "}
+                                tiket
                               </span>
 
                               <span className="text-zinc-700">•</span>
@@ -1334,6 +1684,12 @@ export default function TicketPage() {
                                 tiket
                               </span>
                             </div>
+
+                            {catStyle.desc && (
+                              <p className="mt-1 text-xs text-zinc-500">
+                                Posisi Denah: {catStyle.desc}
+                              </p>
+                            )}
                           </div>
 
                           {/* ACTION BUTTONS: Edit Price, Edit Quota, Lock/Unlock Sales */}
@@ -1342,7 +1698,7 @@ export default function TicketPage() {
                             <button
                               onClick={() => handleOpenEditPrice(ticket)}
                               className="flex items-center gap-1.5 rounded-lg border border-purple-500/30 bg-purple-950/30 px-3.5 py-2 text-xs font-semibold text-purple-200 transition hover:bg-purple-900/50 hover:text-white"
-                              title="Edit Price"
+                              title="Edit Harga Tiket"
                             >
                               <DollarSign size={13} className="text-purple-400" />
                               Edit Price
@@ -1352,13 +1708,13 @@ export default function TicketPage() {
                             <button
                               onClick={() => handleOpenEditQuota(ticket)}
                               className="flex items-center gap-1.5 rounded-lg border border-indigo-500/30 bg-indigo-950/30 px-3.5 py-2 text-xs font-semibold text-indigo-200 transition hover:bg-indigo-900/50 hover:text-white"
-                              title="Edit Quota"
+                              title="Edit Kuota Tiket"
                             >
                               <Layers size={13} className="text-indigo-400" />
                               Edit Quota
                             </button>
 
-                            {/* 3. LOCK SALES / UNLOCK SALES BUTTON */}
+                            {/* 3. LOCK / UNLOCK SALES BUTTON */}
                             <button
                               onClick={() => toggleLockSales(ticket.id)}
                               className={`flex items-center gap-1.5 rounded-lg px-3.5 py-2 text-xs font-bold transition ${
@@ -1366,7 +1722,7 @@ export default function TicketPage() {
                                   ? "border border-amber-500/40 bg-amber-950/50 text-amber-300 hover:bg-amber-900/60"
                                   : "border border-zinc-700/60 bg-zinc-800/60 text-zinc-300 hover:bg-zinc-700 hover:text-white"
                               }`}
-                              title={ticket.locked ? "Unlock Sales" : "Lock Sales"}
+                              title={ticket.locked ? "Buka Penjualan" : "Kunci Penjualan"}
                             >
                               {ticket.locked ? (
                                 <>
@@ -1381,11 +1737,11 @@ export default function TicketPage() {
                               )}
                             </button>
 
-                            {/* EDIT ALL / DELETE DROPDOWN / QUICK ACTIONS */}
+                            {/* EDIT ALL / DELETE DROPDOWN */}
                             <button
                               onClick={() => handleOpenEditFull(ticket)}
                               className="flex items-center gap-1 rounded-lg border border-white/[0.08] bg-white/[0.04] p-2 text-zinc-400 transition hover:bg-white/[0.08] hover:text-zinc-200"
-                              title="Edit Detail Kategori"
+                              title="Edit Detail Kategori Lengkap"
                             >
                               <Edit3 size={14} />
                             </button>
@@ -1438,9 +1794,7 @@ export default function TicketPage() {
             </div>
           )}
 
-          {/* =================================================
-              FOOTER
-          ================================================= */}
+          {/* FOOTER */}
           <footer className="py-12 text-center text-xs text-zinc-500">
             © 2026 Nocturne Admin Portal. All rights reserved. Database-backed Ticket Classes & Quota Management.
           </footer>
@@ -1448,7 +1802,7 @@ export default function TicketPage() {
       </main>
 
       {/* =====================================================
-          MODAL 1: + ADD TICKET CATEGORY
+          MODAL 1: + TAMBAH KATEGORI TIKET
       ===================================================== */}
       {showAddModal && (
         <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/75 px-5 backdrop-blur-sm animate-in fade-in duration-200">
@@ -1457,10 +1811,10 @@ export default function TicketPage() {
               <div>
                 <h2 className="text-xl font-bold text-zinc-100 flex items-center gap-2">
                   <Plus size={20} className="text-purple-400" />
-                  Add Ticket Category
+                  Tambah Kategori Tiket
                 </h2>
                 <p className="mt-1 text-xs text-zinc-400">
-                  Untuk event: <strong className="text-purple-300">{currentEvent?.title}</strong>
+                  Untuk event: <strong className="text-purple-300">{currentEvent?.title}</strong> ({currentTemplate.name})
                 </p>
               </div>
 
@@ -1473,13 +1827,13 @@ export default function TicketPage() {
             </div>
 
             <form onSubmit={handleSaveAddCategory} className="space-y-4">
-              {/* Preset 5 Kategori Sesuai Denah Panggung */}
+              {/* Preset Zona Khusus Layout Event yang Aktif */}
               <div>
                 <label className="mb-2 block text-xs font-bold uppercase tracking-wider text-purple-400">
-                  Pilih Kategori Sesuai Denah Panggung:
+                  Zona Panggung {currentTemplate.name}:
                 </label>
-                <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
-                  {STAGE_CATEGORIES.map((cat) => {
+                <div className="grid grid-cols-2 gap-2">
+                  {currentTemplate.zones.map((cat) => {
                     const isPicked = addForm.name === cat.name;
                     return (
                       <button
@@ -1489,8 +1843,8 @@ export default function TicketPage() {
                           setAddForm({
                             ...addForm,
                             name: cat.name,
-                            price: cat.defaultPrice,
-                            quota: addForm.quota || cat.defaultQuota,
+                            price: String(cat.defaultPrice || 1000000),
+                            quota: addForm.quota || String(cat.defaultQuota || 500),
                           });
                         }}
                         className={`flex items-center gap-2 rounded-xl border p-2.5 text-xs font-bold text-left transition ${
@@ -1508,18 +1862,15 @@ export default function TicketPage() {
                     );
                   })}
                 </div>
-                <p className="mt-1.5 text-[11px] text-zinc-500">
-                  * Klik salah satu kategori di atas untuk otomatis mengisi nama &amp; estimasi harga.
-                </p>
               </div>
 
               <div>
                 <label className="mb-2 block text-xs font-semibold uppercase tracking-wider text-zinc-400">
-                  Ticket Category Name
+                  Nama Kategori Tiket
                 </label>
                 <input
                   type="text"
-                  placeholder="Contoh: VVIP Front Row, CAT 3, Early Bird"
+                  placeholder="Contoh: VIP Ring, Early Bird, General Admission"
                   value={addForm.name}
                   onChange={(e) =>
                     setAddForm({ ...addForm, name: e.target.value })
@@ -1553,7 +1904,7 @@ export default function TicketPage() {
 
               <div>
                 <label className="mb-2 block text-xs font-semibold uppercase tracking-wider text-zinc-400">
-                  Total Quota (Seats / Tiket)
+                  Total Kuota Tiket
                 </label>
                 <input
                   type="number"
@@ -1600,10 +1951,10 @@ export default function TicketPage() {
               <div>
                 <h2 className="text-xl font-bold text-zinc-100 flex items-center gap-2">
                   <DollarSign size={20} className="text-purple-400" />
-                  Edit Price
+                  Atur Harga Tiket
                 </h2>
                 <p className="mt-1 text-xs text-zinc-400">
-                  Ubah harga untuk kategori: <strong className="text-purple-300">{activeTicket.name}</strong>
+                  Kategori: <strong className="text-purple-300">{activeTicket.name}</strong>
                 </p>
               </div>
 
@@ -1617,7 +1968,7 @@ export default function TicketPage() {
 
             <form onSubmit={handleSavePrice} className="space-y-4">
               <div className="rounded-xl border border-white/[0.06] bg-black/20 p-3 text-xs text-zinc-400">
-                Harga saat ini di database: <strong className="text-zinc-200">{formatPrice(activeTicket.price)}</strong>
+                Harga saat ini: <strong className="text-zinc-200">{formatPrice(activeTicket.price)}</strong>
               </div>
 
               <div>
@@ -1631,6 +1982,7 @@ export default function TicketPage() {
                   <input
                     type="number"
                     min="0"
+                    placeholder="Contoh: 1500000"
                     value={priceForm}
                     onChange={(e) => setPriceForm(e.target.value)}
                     className="h-11 w-full rounded-xl border border-white/[0.08] bg-black/40 pl-14 pr-4 text-sm text-zinc-100 outline-none focus:border-purple-500"
@@ -1653,7 +2005,7 @@ export default function TicketPage() {
                   className="flex items-center gap-2 rounded-xl bg-gradient-to-r from-purple-600 to-violet-700 px-5 py-2.5 text-sm font-bold text-white shadow-lg shadow-purple-900/40 transition hover:from-purple-500 hover:to-violet-600 disabled:opacity-50"
                 >
                   {submitting && <Loader2 size={16} className="animate-spin" />}
-                  Update Harga di Database
+                  Update Harga
                 </button>
               </div>
             </form>
@@ -1671,10 +2023,10 @@ export default function TicketPage() {
               <div>
                 <h2 className="text-xl font-bold text-zinc-100 flex items-center gap-2">
                   <Layers size={20} className="text-indigo-400" />
-                  Edit Quota
+                  Atur Kuota Tiket
                 </h2>
                 <p className="mt-1 text-xs text-zinc-400">
-                  Ubah total kuota untuk kategori: <strong className="text-purple-300">{activeTicket.name}</strong>
+                  Kategori: <strong className="text-purple-300">{activeTicket.name}</strong>
                 </p>
               </div>
 
@@ -1688,17 +2040,18 @@ export default function TicketPage() {
 
             <form onSubmit={handleSaveQuota} className="space-y-4">
               <div className="rounded-xl border border-white/[0.06] bg-black/20 p-3 text-xs text-zinc-400 flex items-center justify-between">
-                <span>Kuota di DB: <strong className="text-zinc-200">{activeTicket.quota}</strong></span>
+                <span>Kuota saat ini: <strong className="text-zinc-200">{activeTicket.quota}</strong></span>
                 <span>Terjual: <strong className="text-amber-400">{activeTicket.sold || 0}</strong></span>
               </div>
 
               <div>
                 <label className="mb-2 block text-xs font-semibold uppercase tracking-wider text-zinc-400">
-                  Total Kuota Baru
+                  Total Kuota Baru (Kursi / Tiket)
                 </label>
                 <input
                   type="number"
                   min={activeTicket.sold || 0}
+                  placeholder="Contoh: 500"
                   value={quotaForm}
                   onChange={(e) => setQuotaForm(e.target.value)}
                   className="h-11 w-full rounded-xl border border-white/[0.08] bg-black/40 px-4 text-sm text-zinc-100 outline-none focus:border-purple-500"
@@ -1723,7 +2076,7 @@ export default function TicketPage() {
                   className="flex items-center gap-2 rounded-xl bg-gradient-to-r from-indigo-600 to-purple-700 px-5 py-2.5 text-sm font-bold text-white shadow-lg shadow-indigo-900/40 transition hover:from-indigo-500 hover:to-purple-600 disabled:opacity-50"
                 >
                   {submitting && <Loader2 size={16} className="animate-spin" />}
-                  Update Kuota di Database
+                  Update Kuota
                 </button>
               </div>
             </form>
@@ -1732,7 +2085,7 @@ export default function TicketPage() {
       )}
 
       {/* =====================================================
-          MODAL 4: EDIT FULL (NAME, PRICE, QUOTA)
+          MODAL 4: EDIT FULL (NAMA, HARGA, KUOTA)
       ===================================================== */}
       {showEditFullModal && activeTicket && (
         <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/75 px-5 backdrop-blur-sm animate-in fade-in duration-200">
@@ -1741,10 +2094,10 @@ export default function TicketPage() {
               <div>
                 <h2 className="text-xl font-bold text-zinc-100 flex items-center gap-2">
                   <Edit3 size={20} className="text-purple-400" />
-                  Edit Ticket Category
+                  Edit Kategori Tiket
                 </h2>
                 <p className="mt-1 text-xs text-zinc-400">
-                  Update nama kategori, harga, dan kuota tiket di database.
+                  Ubah data kategori tiket di database.
                 </p>
               </div>
 
@@ -1757,44 +2110,9 @@ export default function TicketPage() {
             </div>
 
             <form onSubmit={handleSaveFull} className="space-y-4">
-              {/* Preset 5 Kategori Sesuai Denah Panggung */}
-              <div>
-                <label className="mb-2 block text-xs font-bold uppercase tracking-wider text-purple-400">
-                  Pilih Preset Denah Panggung:
-                </label>
-                <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
-                  {STAGE_CATEGORIES.map((cat) => {
-                    const isPicked = fullForm.name === cat.name;
-                    return (
-                      <button
-                        key={cat.name}
-                        type="button"
-                        onClick={() => {
-                          setFullForm({
-                            ...fullForm,
-                            name: cat.name,
-                          });
-                        }}
-                        className={`flex items-center gap-2 rounded-xl border p-2 text-xs font-bold text-left transition ${
-                          isPicked
-                            ? "border-purple-500 bg-purple-950/70 text-white ring-2 ring-purple-500/30"
-                            : "border-white/[0.08] bg-black/40 text-zinc-300 hover:border-white/20 hover:bg-white/[0.05]"
-                        }`}
-                      >
-                        <span
-                          className="h-3 w-3 rounded-full shrink-0"
-                          style={{ backgroundColor: cat.color }}
-                        />
-                        <span className="truncate">{cat.name}</span>
-                      </button>
-                    );
-                  })}
-                </div>
-              </div>
-
               <div>
                 <label className="mb-2 block text-xs font-semibold uppercase tracking-wider text-zinc-400">
-                  Ticket Category Name
+                  Nama Kategori
                 </label>
                 <input
                   type="text"
@@ -1830,7 +2148,7 @@ export default function TicketPage() {
 
               <div>
                 <label className="mb-2 block text-xs font-semibold uppercase tracking-wider text-zinc-400">
-                  Total Quota
+                  Total Kuota
                 </label>
                 <input
                   type="number"
@@ -1861,7 +2179,7 @@ export default function TicketPage() {
                   className="flex items-center gap-2 rounded-xl bg-gradient-to-r from-purple-600 to-violet-700 px-5 py-2.5 text-sm font-bold text-white shadow-lg shadow-purple-900/40 transition hover:from-purple-500 hover:to-violet-600 disabled:opacity-50"
                 >
                   {submitting && <Loader2 size={16} className="animate-spin" />}
-                  Simpan Perubahan ke Database
+                  Simpan Perubahan
                 </button>
               </div>
             </form>
