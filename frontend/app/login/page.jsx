@@ -76,7 +76,7 @@ export default function LoginPage() {
             />
 
             <h1 className="mt-6 text-5xl font-bold text-white text-center">
-              Login
+              Nocturne
             </h1>
 
             <p className="mt-4 text-center text-white/80 text-base leading-7">

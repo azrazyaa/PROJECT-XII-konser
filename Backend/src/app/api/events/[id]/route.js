@@ -7,6 +7,7 @@
         const { id } = await params;
         const {
         artist_id,
+        artist_name,
         title,
         description,
         venue,
@@ -17,12 +18,30 @@
         is_closed,
         } = await request.json();
 
+        let finalArtistId = artist_id;
+        if (artist_name && typeof artist_name === "string" && artist_name.trim()) {
+            const trimmedArtist = artist_name.trim();
+            const [existing] = await db.query(
+                "SELECT id FROM artists WHERE LOWER(name) = LOWER(?) LIMIT 1",
+                [trimmedArtist]
+            );
+            if (existing && existing.length > 0) {
+                finalArtistId = existing[0].id;
+            } else {
+                const [inserted] = await db.query(
+                    "INSERT INTO artists (name, genre) VALUES (?, 'Music')",
+                    [trimmedArtist]
+                );
+                finalArtistId = inserted.insertId;
+            }
+        }
+
         const [result] = await db.query(
         `UPDATE events 
-        SET artist_id = ?, title = ?, description = ?, venue = ?, event_date = ?, banner_url = ?, stage_layout = ?, total_quota = ?, is_closed = ?
+        SET artist_id = COALESCE(?, artist_id), title = ?, description = ?, venue = ?, event_date = ?, banner_url = ?, stage_layout = ?, total_quota = ?, is_closed = ?
         WHERE id = ?`,
         [
-            artist_id,
+            finalArtistId,
             title,
             description,
             venue,

@@ -72,8 +72,6 @@ const ticketRows = [
 ];
 
 function Sidebar({ open, setOpen }) {
-  const [active, setActive] = useState("Dashboard");
-
   return (
     <>
       {open && (
@@ -117,52 +115,54 @@ function Sidebar({ open, setOpen }) {
           </p>
 
           <nav className="space-y-1.5">
-            {navItems.map(({ label, icon: Icon }) =>
-              label === "Event CRUD" ? (
-                <Link
-                  key={label}
-                  href="/admin/event"
-                  onClick={() => {
-                    setActive(label);
-                    setOpen(false);
-                  }}
-                  className={`flex w-full items-center gap-5 rounded-lg px-3 py-3.5 text-left transition ${
-                    active === label
-                      ? "border-l-2 border-purple-500 bg-purple-900/20 text-zinc-100"
-                      : "text-zinc-400 hover:bg-white/[0.035] hover:text-zinc-200"
-                  }`}
-                >
-                  <Icon size={19} strokeWidth={1.8} />
+            <a
+              href="/admin"
+              className="flex w-full items-center gap-5 rounded-lg border-l-2 border-purple-500 bg-purple-900/20 px-3 py-3.5 text-zinc-100"
+            >
+              <LayoutDashboard size={19} strokeWidth={1.8} />
+              <span className="text-[15px] font-medium">Dashboard</span>
+              <span className="ml-auto h-1.5 w-1.5 rounded-full bg-purple-400" />
+            </a>
 
-                  <span className="text-[15px] font-medium">{label}</span>
+            <a
+              href="/admin/event"
+              className="flex w-full items-center gap-5 rounded-lg px-3 py-3.5 text-zinc-400 transition hover:bg-white/[0.035] hover:text-zinc-200"
+            >
+              <Ticket size={19} strokeWidth={1.8} />
+              <span className="text-[15px] font-medium">Event CRUD</span>
+            </a>
 
-                  {active === label && (
-                    <span className="ml-auto h-1.5 w-1.5 rounded-full bg-purple-400" />
-                  )}
-                </Link>
-              ) : (
-                <button
-                  key={label}
-                  onClick={() => {
-                    setActive(label);
-                    setOpen(false);
-                  }}
-                  className={`flex w-full items-center gap-5 rounded-lg px-3 py-3.5 text-left transition ${
-                    active === label
-                      ? "border-l-2 border-purple-500 bg-purple-900/20 text-zinc-100"
-                      : "text-zinc-400 hover:bg-white/[0.035] hover:text-zinc-200"
-                  }`}
-                >
-                  <Icon size={19} strokeWidth={1.8} />
+            <a
+              href="/admin/ticket"
+              className="flex w-full items-center gap-5 rounded-lg px-3 py-3.5 text-zinc-400 transition hover:bg-white/[0.035] hover:text-zinc-200"
+            >
+              <TicketCheck size={19} strokeWidth={1.8} />
+              <span className="text-[15px] font-medium">Ticket Classes &amp; Quota</span>
+            </a>
 
-                  <span className="text-[15px] font-medium">{label}</span>
+            <a
+              href="/admin/payment"
+              className="flex w-full items-center gap-5 rounded-lg px-3 py-3.5 text-zinc-400 transition hover:bg-white/[0.035] hover:text-zinc-200"
+            >
+              <ShieldCheck size={19} strokeWidth={1.8} />
+              <span className="text-[15px] font-medium">Verify Payments</span>
+            </a>
 
-                  {active === label && (
-                    <span className="ml-auto h-1.5 w-1.5 rounded-full bg-purple-400" />
-                  )}
-                </button>
-              ),
-            )}
+            <a
+              href="/admin/scanner"
+              className="flex w-full items-center gap-5 rounded-lg px-3 py-3.5 text-zinc-400 transition hover:bg-white/[0.035] hover:text-zinc-200"
+            >
+              <QrCode size={19} strokeWidth={1.8} />
+              <span className="text-[15px] font-medium">QR Ticket Scanner</span>
+            </a>
+
+            <a
+              href="/admin/reports"
+              className="flex w-full items-center gap-5 rounded-lg px-3 py-3.5 text-zinc-400 transition hover:bg-white/[0.035] hover:text-zinc-200"
+            >
+              <BarChart3 size={19} strokeWidth={1.8} />
+              <span className="text-[15px] font-medium">Sales Reports</span>
+            </a>
           </nav>
         </div>
 

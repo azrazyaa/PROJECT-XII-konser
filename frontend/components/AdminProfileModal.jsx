@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import {
   X,
   User,
@@ -9,7 +9,7 @@ import {
   Eye,
   EyeOff,
   Camera,
-  Image as ImageIcon,
+  Upload,
   CheckCircle2,
   AlertCircle,
   Loader2,
@@ -51,6 +51,8 @@ export default function AdminProfileModal({
   const [loading, setLoading] = useState(false);
   const [message, setMessage] = useState({ type: "", text: "" });
   const [imgError, setImgError] = useState(false);
+  const [fileName, setFileName] = useState("");
+  const fileInputRef = useRef(null);
 
   useEffect(() => {
     if (user) {
@@ -60,8 +62,30 @@ export default function AdminProfileModal({
       setPassword("");
       setMessage({ type: "", text: "" });
       setImgError(false);
+      setFileName("");
     }
   }, [user, isOpen]);
+
+  const handleFileChange = (e) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    // Validasi ukuran file (max 2MB)
+    if (file.size > 2 * 1024 * 1024) {
+      setMessage({ type: "error", text: "Ukuran foto maksimal 2MB!" });
+      return;
+    }
+
+    setFileName(file.name);
+    setImgError(false);
+    setMessage({ type: "", text: "" });
+
+    const reader = new FileReader();
+    reader.onload = (ev) => {
+      setAvatarUrl(ev.target.result); // base64 data URL
+    };
+    reader.readAsDataURL(file);
+  };
 
   if (!isOpen) return null;
 
@@ -244,42 +268,61 @@ export default function AdminProfileModal({
                 </div>
               </div>
 
-              {/* Input URL Foto & Preset */}
-              <div className="flex-1 w-full space-y-2.5">
+              {/* File Picker Foto & Preset */}
+              <div className="flex-1 w-full space-y-3">
+                {/* Hidden file input */}
+                <input
+                  ref={fileInputRef}
+                  type="file"
+                  accept="image/*"
+                  className="hidden"
+                  onChange={handleFileChange}
+                />
+
+                {/* Upload Zone / Button */}
                 <div>
-                  <div className="relative">
-                    <input
-                      type="url"
-                      value={avatarUrl}
-                      onChange={(e) => {
-                        setAvatarUrl(e.target.value);
+                  <button
+                    type="button"
+                    onClick={() => fileInputRef.current?.click()}
+                    className="w-full flex items-center gap-3 rounded-xl border-2 border-dashed border-purple-500/30 bg-purple-950/10 px-4 py-3 text-sm text-zinc-300 transition hover:border-purple-500/60 hover:bg-purple-950/20 hover:text-zinc-100"
+                  >
+                    <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-purple-900/50 text-purple-300">
+                      <Upload size={16} />
+                    </div>
+                    <div className="text-left min-w-0">
+                      <div className="font-semibold text-sm text-zinc-200">
+                        {fileName ? fileName : "Pilih foto dari komputer"}
+                      </div>
+                      <div className="text-[11px] text-zinc-500 mt-0.5">
+                        {fileName ? "Klik untuk ganti foto" : "JPG, PNG, GIF, WEBP · Maks. 2MB"}
+                      </div>
+                    </div>
+                    <span className="ml-auto shrink-0 rounded-lg bg-purple-800/60 border border-purple-500/30 px-3 py-1 text-xs font-bold text-purple-200">
+                      Browse
+                    </span>
+                  </button>
+
+                  {/* Tombol hapus foto */}
+                  {avatarUrl && (
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setAvatarUrl("");
+                        setFileName("");
                         setImgError(false);
+                        if (fileInputRef.current) fileInputRef.current.value = "";
                       }}
-                      placeholder="Masukkan URL foto profil (https://...)"
-                      className="w-full rounded-xl border border-white/[0.08] bg-[#120e24] px-4 py-2.5 text-sm text-zinc-100 placeholder:text-zinc-600 outline-none focus:border-purple-500/60 focus:ring-1 focus:ring-purple-500/50"
-                    />
-                    {avatarUrl && (
-                      <button
-                        type="button"
-                        onClick={() => {
-                          setAvatarUrl("");
-                          setImgError(false);
-                        }}
-                        className="absolute right-3 top-1/2 -translate-y-1/2 text-xs font-semibold text-zinc-500 hover:text-red-400 transition"
-                      >
-                        Hapus
-                      </button>
-                    )}
-                  </div>
-                  <p className="mt-1 text-[11px] text-zinc-500">
-                    Masukkan URL foto gambar langsung atau pilih preset avatar keren di bawah:
-                  </p>
+                      className="mt-1.5 text-[11px] font-semibold text-red-400 hover:text-red-300 transition"
+                    >
+                      × Hapus foto
+                    </button>
+                  )}
                 </div>
 
                 {/* Preset Avatars */}
-                <div className="flex flex-wrap items-center gap-2 pt-1">
+                <div className="flex flex-wrap items-center gap-2 pt-0.5">
                   <span className="text-[11px] font-medium text-zinc-400 flex items-center gap-1">
-                    <Sparkles size={12} className="text-purple-400" /> Preset:
+                    <Sparkles size={12} className="text-purple-400" /> Atau pakai preset:
                   </span>
                   {AVATAR_PRESETS.map((preset, idx) => (
                     <button
@@ -287,6 +330,7 @@ export default function AdminProfileModal({
                       type="button"
                       onClick={() => {
                         setAvatarUrl(preset.url);
+                        setFileName("");
                         setImgError(false);
                       }}
                       className="inline-flex items-center gap-1.5 rounded-lg border border-white/[0.08] bg-[#16122c] px-2.5 py-1 text-xs text-zinc-300 transition hover:border-purple-500/40 hover:bg-purple-950/40"

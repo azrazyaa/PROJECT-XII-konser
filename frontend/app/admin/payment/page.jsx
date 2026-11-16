@@ -195,16 +195,6 @@ function Sidebar({ open, setOpen }) {
               </span>
             </Link>
 
-            {/* ARTISTS */}
-            <Link
-              href="/admin/artists"
-              onClick={() => setOpen(false)}
-              className="flex items-center gap-5 rounded-lg px-3 py-3.5 text-zinc-400 transition hover:bg-white/[0.035] hover:text-zinc-200"
-            >
-              <Mic2 size={19} strokeWidth={1.8} />
-              <span className="text-[15px] font-medium">Artists</span>
-            </Link>
-
             {/* VERIFY PAYMENTS - ACTIVE */}
             <Link
               href="/admin/payment"

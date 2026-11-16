@@ -114,16 +114,6 @@ function Sidebar({ open, setOpen }) {
               <span className="ml-auto h-1.5 w-1.5 rounded-full bg-purple-400" />
             </Link>
 
-            {/* ARTISTS */}
-            <Link
-              href="/admin/artists"
-              onClick={() => setOpen(false)}
-              className="flex items-center gap-5 rounded-lg px-3 py-3.5 text-zinc-400 transition hover:bg-white/[0.035] hover:text-zinc-200"
-            >
-              <Mic2 size={19} strokeWidth={1.8} />
-              <span className="text-[15px] font-medium">Artists</span>
-            </Link>
-
             {/* PAYMENT */}
             <Link
               href="/admin/payment"
@@ -306,6 +296,179 @@ function Topbar({ setOpen }) {
 }
 
 /* =========================================================
+   5 KATEGORI TIKET SESUAI DENAH LAYOUT PANGGUNG
+========================================================= */
+
+const STAGE_CATEGORIES = [
+  {
+    name: "VIP Zone",
+    color: "#3b82f6",
+    colorName: "blue",
+    badgeClass: "bg-blue-500/15 text-blue-300 border-blue-500/40",
+    dotClass: "bg-blue-400 ring-4 ring-blue-500/20",
+    barGradient: "from-blue-600 to-cyan-400",
+    borderHover: "hover:border-blue-500/40",
+    defaultPrice: "2500000",
+    defaultQuota: "500",
+    desc: "Tepat di depan panggung utama dengan pandangan terjelas & eksklusif",
+  },
+  {
+    name: "CAT 1 (Side)",
+    color: "#ec4899",
+    colorName: "pink",
+    badgeClass: "bg-pink-500/15 text-pink-300 border-pink-500/40",
+    dotClass: "bg-pink-400 ring-4 ring-pink-500/20",
+    barGradient: "from-pink-600 to-rose-400",
+    borderHover: "hover:border-pink-500/40",
+    defaultPrice: "1750000",
+    defaultQuota: "1000",
+    desc: "Sayap panggung kiri & kanan dengan angle panggung intim",
+  },
+  {
+    name: "Festival",
+    color: "#10b981",
+    colorName: "emerald",
+    badgeClass: "bg-emerald-500/15 text-emerald-300 border-emerald-500/40",
+    dotClass: "bg-emerald-400 ring-4 ring-emerald-500/20",
+    barGradient: "from-emerald-600 to-teal-400",
+    borderHover: "hover:border-emerald-500/40",
+    defaultPrice: "950000",
+    defaultQuota: "3000",
+    desc: "Area berdiri bebas (General Standing) di bagian tengah venue",
+  },
+  {
+    name: "Tribune",
+    color: "#6366f1",
+    colorName: "indigo",
+    badgeClass: "bg-indigo-500/15 text-indigo-300 border-indigo-500/40",
+    dotClass: "bg-indigo-400 ring-4 ring-indigo-500/20",
+    barGradient: "from-indigo-600 to-purple-400",
+    borderHover: "hover:border-indigo-500/40",
+    defaultPrice: "650000",
+    defaultQuota: "2000",
+    desc: "Tempat duduk bertingkat di bagian belakang dengan pandangan menyeluruh",
+  },
+  {
+    name: "Stage",
+    color: "#7c3aed",
+    colorName: "purple",
+    badgeClass: "bg-purple-500/15 text-purple-300 border-purple-500/40",
+    dotClass: "bg-purple-400 ring-4 ring-purple-500/20",
+    barGradient: "from-purple-600 to-violet-400",
+    borderHover: "hover:border-purple-500/40",
+    defaultPrice: "3500000",
+    defaultQuota: "200",
+    desc: "Area panggung utama / akses panggung VIP khusus",
+  },
+];
+
+const getCategoryStyle = (ticketName = "") => {
+  const lower = (ticketName || "").toLowerCase();
+  if (lower.includes("vip") && !lower.includes("stage")) {
+    return STAGE_CATEGORIES[0]; // VIP Zone
+  }
+  if (lower.includes("cat 1") || lower.includes("cat1") || lower.includes("side")) {
+    return STAGE_CATEGORIES[1]; // CAT 1 (Side)
+  }
+  if (lower.includes("fest")) {
+    return STAGE_CATEGORIES[2]; // Festival
+  }
+  if (lower.includes("tribun")) {
+    return STAGE_CATEGORIES[3]; // Tribune
+  }
+  if (lower.includes("stage")) {
+    return STAGE_CATEGORIES[4]; // Stage
+  }
+  return {
+    name: ticketName,
+    color: "#a855f7",
+    colorName: "purple",
+    badgeClass: "bg-purple-500/15 text-purple-300 border-purple-500/40",
+    dotClass: "bg-purple-400 ring-4 ring-purple-500/20",
+    barGradient: "from-purple-600 to-violet-400",
+    borderHover: "hover:border-purple-500/40",
+  };
+};
+
+function TicketStageLayout({ onSelectCategory }) {
+  return (
+    <div className="rounded-2xl border border-white/[0.08] bg-[#090717]/90 p-5 shadow-2xl backdrop-blur-md">
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 border-b border-white/[0.06] pb-4 mb-4">
+        <div>
+          <div className="flex items-center gap-2">
+            <span className="flex h-2 w-2 rounded-full bg-purple-400 animate-pulse" />
+            <h3 className="text-base font-bold text-zinc-100">
+              Denah Layout Panggung &amp; 5 Kategori Tiket
+            </h3>
+          </div>
+          <p className="mt-0.5 text-xs text-zinc-400">
+            Warna kartu tiket di bawah disesuaikan dengan posisi panggung di denah. Klik tombol kategori untuk langsung tambah tiket.
+          </p>
+        </div>
+
+        {/* Action Quick Legend Pills */}
+        <div className="flex flex-wrap items-center gap-2">
+          {STAGE_CATEGORIES.map((cat) => (
+            <button
+              key={cat.name}
+              type="button"
+              onClick={() => onSelectCategory && onSelectCategory(cat)}
+              className="flex items-center gap-1.5 rounded-lg border border-white/[0.08] bg-black/40 px-2.5 py-1 text-[11px] font-semibold text-zinc-300 transition hover:border-purple-500/50 hover:bg-purple-950/30 active:scale-95"
+              title={`Klik untuk tambah tiket ${cat.name}`}
+            >
+              <span className="h-2.5 w-2.5 rounded-full" style={{ backgroundColor: cat.color }} />
+              <span>{cat.name}</span>
+            </button>
+          ))}
+        </div>
+      </div>
+
+      {/* SVG Diagram Panggung Interaktif */}
+      <div className="relative mx-auto max-w-xl overflow-hidden rounded-xl bg-[#060411]/80 p-3 border border-white/[0.04]">
+        <svg viewBox="0 0 200 130" className="w-full h-44 sm:h-52">
+          <rect x="8" y="8" width="184" height="114" rx="8" fill="#0d0a1e" stroke="#251e3a" strokeWidth="1.2" />
+          
+          {/* Main Stage */}
+          <rect x="52" y="14" width="96" height="22" rx="4" fill="#7c3aed" />
+          <text x="100" y="28" fill="#ffffff" fontSize="8.5" fontWeight="bold" textAnchor="middle" letterSpacing="0.8">
+            MAIN STAGE
+          </text>
+          
+          {/* VIP Zone */}
+          <rect x="62" y="42" width="76" height="22" rx="3" fill="#3b82f6" fillOpacity="0.4" stroke="#60a5fa" strokeWidth="1.2" />
+          <text x="100" y="55" fill="#bfdbfe" fontSize="7.5" fontWeight="bold" textAnchor="middle">
+            VIP ZONE
+          </text>
+          
+          {/* CAT 1 Left & Right */}
+          <rect x="18" y="42" width="38" height="34" rx="3" fill="#ec4899" fillOpacity="0.35" stroke="#f472b6" strokeWidth="1.2" />
+          <text x="37" y="61" fill="#fbcfe8" fontSize="6.5" fontWeight="bold" textAnchor="middle">
+            CAT 1 (L)
+          </text>
+          
+          <rect x="144" y="42" width="38" height="34" rx="3" fill="#ec4899" fillOpacity="0.35" stroke="#f472b6" strokeWidth="1.2" />
+          <text x="163" y="61" fill="#fbcfe8" fontSize="6.5" fontWeight="bold" textAnchor="middle">
+            CAT 1 (R)
+          </text>
+          
+          {/* Festival */}
+          <rect x="62" y="68" width="76" height="22" rx="3" fill="#10b981" fillOpacity="0.3" stroke="#34d399" strokeWidth="1.2" />
+          <text x="100" y="82" fill="#a7f3d0" fontSize="7" fontWeight="bold" textAnchor="middle">
+            FESTIVAL
+          </text>
+          
+          {/* Tribune */}
+          <path d="M 18 80 Q 100 110 182 80 L 182 112 Q 100 118 18 112 Z" fill="#6366f1" fillOpacity="0.3" stroke="#818cf8" strokeWidth="1.2" />
+          <text x="100" y="101" fill="#c7d2fe" fontSize="7" fontWeight="bold" textAnchor="middle">
+            TRIBUNE SEATING
+          </text>
+        </svg>
+      </div>
+    </div>
+  );
+}
+
+/* =========================================================
    TICKET PAGE
 ========================================================= */
 
@@ -365,7 +528,7 @@ export default function TicketPage() {
   ===================================================== */
 
   const formatPrice = (price) => {
-    return `IDR ${Number(price || 0).toLocaleString("id-ID")}`;
+    return `Rp. ${Number(price || 0).toLocaleString("id-ID")}`;
   };
 
   const formatDate = (dateString) => {
@@ -455,11 +618,7 @@ export default function TicketPage() {
 
         setEvents(eventList);
 
-        if (eventList.length > 0) {
-          const firstId = eventList[0].id;
-          setSelectedEventId(firstId);
-          fetchTicketsForEvent(firstId);
-        }
+        // Jangan auto-select event pertama, biarkan admin memilih konser terlebih dahulu
       } catch (err) {
         console.error("Error loading events:", err);
       } finally {
@@ -486,20 +645,28 @@ export default function TicketPage() {
     return titleMatch || venueMatch || artistMatch;
   });
 
-  // Active event object
+  // Active event object - hanya aktif jika ada konser yang dipilih
   const currentEvent =
-    events.find((e) => e.id === selectedEventId) || events[0] || null;
+    events.find((e) => e.id === selectedEventId) || null;
 
   /* =====================================================
      ACTIONS: ADD TICKET CATEGORY (POST /api/tickets)
   ===================================================== */
 
-  const handleOpenAddModal = () => {
-    setAddForm({
-      name: "",
-      price: "",
-      quota: "",
-    });
+  const handleOpenAddModal = (preset = null) => {
+    if (preset) {
+      setAddForm({
+        name: preset.name,
+        price: preset.defaultPrice || "",
+        quota: preset.defaultQuota || "",
+      });
+    } else {
+      setAddForm({
+        name: "",
+        price: "",
+        quota: "",
+      });
+    }
     setShowAddModal(true);
   };
 
@@ -1007,11 +1174,14 @@ export default function TicketPage() {
                           {statusLabel}
                         </span>
 
-                        <span className="flex items-center gap-1 text-zinc-400">
-                          <Tag size={12} className="text-purple-400" />
-                          <span className="font-semibold text-zinc-300">
-                            ID: {evt.id}
-                          </span>
+                        <span
+                          className={`flex items-center gap-1.5 rounded-lg px-2.5 py-1 text-xs font-bold transition ${
+                            isSelected
+                              ? "bg-purple-600 text-white shadow-sm"
+                              : "bg-purple-950/40 text-purple-300 border border-purple-500/30 group-hover:bg-purple-900/60"
+                          }`}
+                        >
+                          {isSelected ? "Sedang Dikelola ✓" : "Kelola Tiket →"}
                         </span>
                       </div>
                     </div>
@@ -1024,7 +1194,19 @@ export default function TicketPage() {
           {/* =================================================
               SELECTED EVENT TICKET MANAGEMENT
           ================================================= */}
-          {currentEvent && (
+          {!currentEvent ? (
+            <div className="flex flex-col items-center justify-center rounded-2xl border border-dashed border-purple-500/25 bg-[#0a0718]/60 p-12 text-center shadow-xl">
+              <div className="flex h-16 w-16 items-center justify-center rounded-2xl bg-purple-950/60 text-purple-400 border border-purple-500/30 mb-4 shadow-lg shadow-purple-950/50">
+                <Ticket size={32} />
+              </div>
+              <h3 className="text-xl font-bold text-zinc-100">
+                Pilih Konser Terlebih Dahulu
+              </h3>
+              <p className="mt-1.5 max-w-md text-sm text-zinc-400">
+                Klik salah satu kartu konser di atas untuk membuka denah panggung dan mulai menambah atau mengatur 5 kategori tiket (Stage, VIP Zone, CAT 1 (Side), Festival, Tribune).
+              </p>
+            </div>
+          ) : (
             <div className="space-y-6">
               {/* HEADER TOOLBAR FOR SELECTED EVENT */}
               <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between rounded-2xl border border-purple-500/20 bg-gradient-to-r from-purple-950/30 via-[#100c25] to-[#0a0817] p-5 sm:px-6 shadow-xl">
@@ -1044,13 +1226,16 @@ export default function TicketPage() {
 
                 {/* + ADD TICKET CATEGORY BUTTON */}
                 <button
-                  onClick={handleOpenAddModal}
+                  onClick={() => handleOpenAddModal()}
                   className="flex items-center justify-center gap-2 rounded-xl bg-gradient-to-r from-purple-600 to-violet-700 px-5 py-3 text-sm font-bold text-white shadow-lg shadow-purple-900/40 transition hover:from-purple-500 hover:to-violet-600 active:scale-[0.98]"
                 >
                   <Plus size={18} strokeWidth={2.5} />
                   + Add Ticket Category
                 </button>
               </div>
+
+              {/* DENAH LAYOUT PANGGUNG DENGAN 5 KATEGORI */}
+              <TicketStageLayout onSelectCategory={(cat) => handleOpenAddModal(cat)} />
 
               {/* TICKET CATEGORIES LIST */}
               <div className="space-y-4">
@@ -1069,6 +1254,7 @@ export default function TicketPage() {
                   </div>
                 ) : (
                   tickets.map((ticket) => {
+                    const catStyle = getCategoryStyle(ticket.name);
                     const remaining = Math.max(0, ticket.quota - (ticket.sold || 0));
                     const percentage =
                       ticket.quota > 0
@@ -1082,27 +1268,32 @@ export default function TicketPage() {
                         className={`rounded-2xl border p-5 sm:p-6 shadow-xl transition-all duration-200 ${
                           ticket.locked
                             ? "border-amber-500/20 bg-[#090714]/90"
-                            : "border-white/[0.04] bg-[#070512]/90 hover:border-purple-500/30"
+                            : `border-white/[0.06] bg-[#070512]/90 ${catStyle.borderHover}`
                         }`}
                       >
                         {/* TOP SECTION */}
                         <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
                           {/* CATEGORY INFO */}
                           <div>
-                            <div className="flex items-center gap-3">
+                            <div className="flex flex-wrap items-center gap-3">
                               <span
-                                className={`h-3 w-3 rounded-full ${
-                                  ticket.locked
-                                    ? "bg-amber-500 ring-4 ring-amber-500/20"
-                                    : isAlmostFull
-                                    ? "bg-amber-400"
-                                    : "bg-emerald-400"
-                                }`}
+                                className="h-3.5 w-3.5 rounded-full shrink-0 ring-4"
+                                style={{
+                                  backgroundColor: catStyle.color,
+                                  boxShadow: `0 0 10px ${catStyle.color}80`,
+                                }}
+                                title={`Zona Layout: ${catStyle.name || ticket.name}`}
                               />
 
                               <h3 className="text-[18px] font-bold text-zinc-100">
                                 {ticket.name}
                               </h3>
+
+                              <span
+                                className={`rounded-full border px-2.5 py-0.5 text-[11px] font-bold ${catStyle.badgeClass}`}
+                              >
+                                {catStyle.name || "Kategori"}
+                              </span>
 
                               {/* STATUS BADGE */}
                               {ticket.locked ? (
@@ -1220,7 +1411,7 @@ export default function TicketPage() {
                               / {Number(ticket.quota).toLocaleString("id-ID")} tiket
                             </span>
 
-                            <span className="font-bold text-purple-400">{percentage}%</span>
+                            <span className="font-bold" style={{ color: catStyle.color }}>{percentage}%</span>
                           </div>
 
                           <div className="mt-2 h-3 w-full overflow-hidden rounded-full bg-zinc-800/80">
@@ -1228,7 +1419,7 @@ export default function TicketPage() {
                               className={`h-full rounded-full transition-all duration-500 ${
                                 ticket.locked
                                   ? "bg-gradient-to-r from-amber-600 to-amber-400"
-                                  : "bg-gradient-to-r from-purple-600 to-violet-400"
+                                  : `bg-gradient-to-r ${catStyle.barGradient}`
                               }`}
                               style={{ width: `${percentage}%` }}
                             />
@@ -1282,6 +1473,46 @@ export default function TicketPage() {
             </div>
 
             <form onSubmit={handleSaveAddCategory} className="space-y-4">
+              {/* Preset 5 Kategori Sesuai Denah Panggung */}
+              <div>
+                <label className="mb-2 block text-xs font-bold uppercase tracking-wider text-purple-400">
+                  Pilih Kategori Sesuai Denah Panggung:
+                </label>
+                <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
+                  {STAGE_CATEGORIES.map((cat) => {
+                    const isPicked = addForm.name === cat.name;
+                    return (
+                      <button
+                        key={cat.name}
+                        type="button"
+                        onClick={() => {
+                          setAddForm({
+                            ...addForm,
+                            name: cat.name,
+                            price: cat.defaultPrice,
+                            quota: addForm.quota || cat.defaultQuota,
+                          });
+                        }}
+                        className={`flex items-center gap-2 rounded-xl border p-2.5 text-xs font-bold text-left transition ${
+                          isPicked
+                            ? "border-purple-500 bg-purple-950/70 text-white ring-2 ring-purple-500/30"
+                            : "border-white/[0.08] bg-black/40 text-zinc-300 hover:border-white/20 hover:bg-white/[0.05]"
+                        }`}
+                      >
+                        <span
+                          className="h-3 w-3 rounded-full shrink-0"
+                          style={{ backgroundColor: cat.color }}
+                        />
+                        <span className="truncate">{cat.name}</span>
+                      </button>
+                    );
+                  })}
+                </div>
+                <p className="mt-1.5 text-[11px] text-zinc-500">
+                  * Klik salah satu kategori di atas untuk otomatis mengisi nama &amp; estimasi harga.
+                </p>
+              </div>
+
               <div>
                 <label className="mb-2 block text-xs font-semibold uppercase tracking-wider text-zinc-400">
                   Ticket Category Name
@@ -1300,11 +1531,11 @@ export default function TicketPage() {
 
               <div>
                 <label className="mb-2 block text-xs font-semibold uppercase tracking-wider text-zinc-400">
-                  Price (IDR)
+                  Harga Tiket (Rp)
                 </label>
                 <div className="relative">
                   <span className="absolute left-4 top-1/2 -translate-y-1/2 text-xs font-bold text-zinc-500">
-                    IDR
+                    Rp
                   </span>
                   <input
                     type="number"
@@ -1391,11 +1622,11 @@ export default function TicketPage() {
 
               <div>
                 <label className="mb-2 block text-xs font-semibold uppercase tracking-wider text-zinc-400">
-                  Harga Baru (IDR)
+                  Harga Baru (Rp)
                 </label>
                 <div className="relative">
                   <span className="absolute left-4 top-1/2 -translate-y-1/2 text-xs font-bold text-zinc-500">
-                    IDR
+                    Rp
                   </span>
                   <input
                     type="number"
@@ -1526,6 +1757,41 @@ export default function TicketPage() {
             </div>
 
             <form onSubmit={handleSaveFull} className="space-y-4">
+              {/* Preset 5 Kategori Sesuai Denah Panggung */}
+              <div>
+                <label className="mb-2 block text-xs font-bold uppercase tracking-wider text-purple-400">
+                  Pilih Preset Denah Panggung:
+                </label>
+                <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
+                  {STAGE_CATEGORIES.map((cat) => {
+                    const isPicked = fullForm.name === cat.name;
+                    return (
+                      <button
+                        key={cat.name}
+                        type="button"
+                        onClick={() => {
+                          setFullForm({
+                            ...fullForm,
+                            name: cat.name,
+                          });
+                        }}
+                        className={`flex items-center gap-2 rounded-xl border p-2 text-xs font-bold text-left transition ${
+                          isPicked
+                            ? "border-purple-500 bg-purple-950/70 text-white ring-2 ring-purple-500/30"
+                            : "border-white/[0.08] bg-black/40 text-zinc-300 hover:border-white/20 hover:bg-white/[0.05]"
+                        }`}
+                      >
+                        <span
+                          className="h-3 w-3 rounded-full shrink-0"
+                          style={{ backgroundColor: cat.color }}
+                        />
+                        <span className="truncate">{cat.name}</span>
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
+
               <div>
                 <label className="mb-2 block text-xs font-semibold uppercase tracking-wider text-zinc-400">
                   Ticket Category Name
@@ -1543,11 +1809,11 @@ export default function TicketPage() {
 
               <div>
                 <label className="mb-2 block text-xs font-semibold uppercase tracking-wider text-zinc-400">
-                  Price (IDR)
+                  Harga Tiket (Rp)
                 </label>
                 <div className="relative">
                   <span className="absolute left-4 top-1/2 -translate-y-1/2 text-xs font-bold text-zinc-500">
-                    IDR
+                    Rp
                   </span>
                   <input
                     type="number"

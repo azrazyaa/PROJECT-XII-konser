@@ -78,8 +78,18 @@ export async function PUT(request, { params }) {
     const current = existing[0];
 
     const updatedName = name !== undefined ? name.trim() : current.name;
-    const updatedPrice = price !== undefined ? Number(price) : current.price;
-    const updatedQuota = quota !== undefined ? Number(quota) : current.quota;
+    const updatedPrice =
+      price !== undefined
+        ? typeof price === "string"
+          ? Number(price.replace(/[^0-9]/g, ""))
+          : Number(price)
+        : current.price;
+    const updatedQuota =
+      quota !== undefined
+        ? typeof quota === "string"
+          ? Number(quota.replace(/[^0-9]/g, ""))
+          : Number(quota)
+        : current.quota;
     const updatedLocked =
       is_locked !== undefined ? (is_locked ? 1 : 0) : current.is_locked;
 

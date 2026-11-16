@@ -110,15 +110,6 @@ function Sidebar({ open, setOpen }) {
             </Link>
 
             <Link
-              href="/admin/artists"
-              onClick={() => setOpen(false)}
-              className="flex w-full items-center gap-5 rounded-lg px-3 py-3.5 text-zinc-400 transition hover:bg-white/[0.035] hover:text-zinc-200"
-            >
-              <Mic2 size={19} strokeWidth={1.8} />
-              <span className="text-[15px] font-medium">Artists</span>
-            </Link>
-
-            <Link
               href="/admin/payment"
               onClick={() => setOpen(false)}
               className="flex w-full items-center gap-5 rounded-lg px-3 py-3.5 text-zinc-400 transition hover:bg-white/[0.035] hover:text-zinc-200"
@@ -462,18 +453,6 @@ function StageLayoutDiagram({ layout, isLarge = false }) {
 }
 
 // ============================================================
-// ARTISTS DATA (Matching MySQL Database)
-// ============================================================
-
-const availableArtists = [
-  { id: 1, name: "Aurora Velez", genre: "Electronic / Synthwave" },
-  { id: 2, name: "Kai Matsumoto", genre: "J-Rock / Alternative" },
-  { id: 3, name: "Luna De Santos", genre: "Latin Pop / Reggaeton" },
-  { id: 4, name: "The Voidwalkers", genre: "Progressive Metal" },
-  { id: 5, name: "Zara Noor", genre: "R&B / Soul" },
-];
-
-// ============================================================
 // MAIN EVENT PAGE
 // ============================================================
 
@@ -493,7 +472,7 @@ export default function EventPage() {
     title: "",
     venue: "",
     event_date: "",
-    artist_id: "1",
+    artist_name: "",
     description: "",
     banner_url: "",
     stage_layout: "Main Stage",
@@ -699,11 +678,6 @@ export default function EventPage() {
           return;
         }
 
-        const foundArtist = availableArtists.find(
-          (a) => a.id === event.artist_id || a.name === event.artist_name
-        );
-        const artistId = foundArtist ? foundArtist.id : (event.artist_id || 1);
-
         const response = await fetch(`/api/events/${event.id}`, {
           method: "PUT",
           headers: {
@@ -711,7 +685,8 @@ export default function EventPage() {
             Authorization: `Bearer ${token}`,
           },
           body: JSON.stringify({
-            artist_id: artistId,
+            artist_id: event.artist_id,
+            artist_name: event.artist_name,
             title: event.title,
             description: event.description || "",
             venue: event.venue,
@@ -755,10 +730,6 @@ export default function EventPage() {
       // Jika statusnya sudah Completed, ubah kembali jadi Active (is_closed: 0).
       // Jika statusnya belum Completed, tandai sebagai Completed (is_closed: 1).
       const newIsClosed = currentStatus === "Completed" || event.is_closed === 1 ? 0 : 1;
-      const foundArtist = availableArtists.find(
-        (a) => a.id === event.artist_id || a.name === event.artist_name
-      );
-      const artistId = foundArtist ? foundArtist.id : (event.artist_id || 1);
 
       const response = await fetch(`/api/events/${event.id}`, {
         method: "PUT",
@@ -767,7 +738,8 @@ export default function EventPage() {
           Authorization: `Bearer ${token}`,
         },
         body: JSON.stringify({
-          artist_id: artistId,
+          artist_id: event.artist_id,
+          artist_name: event.artist_name,
           title: event.title,
           description: event.description || "",
           venue: event.venue,
@@ -799,7 +771,7 @@ export default function EventPage() {
   const saveEvent = async (e) => {
     e.preventDefault();
 
-    if (!form.title || !form.venue || !form.event_date || !form.artist_id) {
+    if (!form.title || !form.venue || !form.event_date || !form.artist_name?.trim()) {
       alert("Judul, venue, tanggal konser, dan artis wajib diisi.");
       return;
     }
@@ -810,7 +782,7 @@ export default function EventPage() {
       title: form.title,
       venue: form.venue,
       event_date: form.event_date,
-      artist_id: parseInt(form.artist_id, 10),
+      artist_name: form.artist_name.trim(),
       description: form.description || "",
       banner_url: form.banner_url || "",
       stage_layout: form.stage_layout || "Main Stage",
@@ -834,7 +806,7 @@ export default function EventPage() {
         title: "",
         venue: "",
         event_date: "",
-        artist_id: "1",
+        artist_name: "",
         description: "",
         banner_url: "",
         stage_layout: "Main Stage",
@@ -867,7 +839,7 @@ export default function EventPage() {
       title: "",
       venue: "",
       event_date: "",
-      artist_id: "1",
+      artist_name: "",
       description: "",
       banner_url: "",
       stage_layout: "Main Stage",
@@ -879,18 +851,11 @@ export default function EventPage() {
 
   const openEditModal = (event) => {
     setEditingEvent(event);
-    const foundArtist = availableArtists.find(
-      (a) => a.id === event.artist_id || a.name === event.artist_name
-    );
     setForm({
       title: event.title || "",
       venue: event.venue || "",
       event_date: toInputDate(event.event_date),
-      artist_id: foundArtist
-        ? String(foundArtist.id)
-        : event.artist_id
-        ? String(event.artist_id)
-        : "1",
+      artist_name: event.artist_name || "",
       description: event.description || "",
       banner_url: event.banner_url || "",
       stage_layout: event.stage_layout || "Main Stage",
@@ -1346,21 +1311,16 @@ export default function EventPage() {
                   <label className="mb-2 block text-sm font-semibold text-zinc-300">
                     Artis / Performer <span className="text-red-400">*</span>
                   </label>
-                  <select
-                    value={form.artist_id}
+                  <input
+                    type="text"
+                    placeholder="Contoh: Coldplay, Taylor Swift, dll."
+                    value={form.artist_name}
                     onChange={(e) =>
-                      setForm({ ...form, artist_id: e.target.value })
+                      setForm({ ...form, artist_name: e.target.value })
                     }
-                    className="h-11 w-full rounded-xl border border-white/[0.06] bg-[#141026] px-4 text-sm text-zinc-200 outline-none focus:border-purple-500/50"
+                    className="h-11 w-full rounded-xl border border-white/[0.06] bg-black/30 px-4 text-sm text-zinc-200 outline-none placeholder:text-zinc-600 focus:border-purple-500/50"
                     required
-                  >
-                    <option value="" disabled>Select an Artist</option>
-                    {availableArtists.map((artist) => (
-                      <option key={artist.id} value={artist.id} className="bg-[#0d0b1c] text-zinc-200">
-                        {artist.name} ({artist.genre})
-                      </option>
-                    ))}
-                  </select>
+                  />
                 </div>
 
                 <div>
@@ -1369,13 +1329,15 @@ export default function EventPage() {
                   </label>
                   <div className="relative">
                     <input
-                      type="number"
-                      min="1"
-                      placeholder="Contoh: 5000"
+                      type="text"
+                      inputMode="numeric"
+                      placeholder="Contoh: 10000"
                       value={form.total_quota}
-                      onChange={(e) =>
-                        setForm({ ...form, total_quota: e.target.value })
-                      }
+                      onChange={(e) => {
+                        // Hanya izinkan angka saja, tidak ada karakter lain
+                        const val = e.target.value.replace(/[^0-9]/g, "");
+                        setForm({ ...form, total_quota: val });
+                      }}
                       className="h-11 w-full rounded-xl border border-white/[0.06] bg-black/30 px-4 pr-16 text-sm text-zinc-200 outline-none placeholder:text-zinc-600 focus:border-purple-500/50"
                       required
                     />
@@ -1645,11 +1607,11 @@ export default function EventPage() {
 
             {/* Banner Image Preview */}
             {detailEvent.banner_url ? (
-              <div className="mt-6 h-64 sm:h-80 w-full overflow-hidden rounded-2xl border border-white/[0.08] bg-black/60 shadow-inner">
+              <div className="mt-6 w-full overflow-hidden rounded-2xl border border-white/[0.08] bg-black/60 shadow-inner">
                 <img
                   src={detailEvent.banner_url}
                   alt={detailEvent.title}
-                  className="h-full w-full object-cover"
+                  className="w-full h-auto object-contain block"
                   onError={(e) => {
                     e.currentTarget.parentElement.style.display = "none";
                   }}

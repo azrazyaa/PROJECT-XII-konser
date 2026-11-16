@@ -60,7 +60,10 @@ export async function POST(request) {
   try {
     const { event_id, name, price, quota, is_locked } = await request.json();
 
-    if (!event_id || !name || price === undefined || quota === undefined) {
+    const cleanPrice = typeof price === "string" ? Number(price.replace(/[^0-9]/g, "")) : Number(price);
+    const cleanQuota = typeof quota === "string" ? Number(quota.replace(/[^0-9]/g, "")) : Number(quota);
+
+    if (!event_id || !name || isNaN(cleanPrice) || isNaN(cleanQuota)) {
       return NextResponse.json(
         {
           success: false,
@@ -75,7 +78,7 @@ export async function POST(request) {
     const [result] = await db.query(
       `INSERT INTO ticket_categories (event_id, name, price, quota, is_locked)
        VALUES (?, ?, ?, ?, ?)`,
-      [event_id, name.trim(), Number(price), Number(quota), lockedVal]
+      [event_id, name.trim(), cleanPrice, cleanQuota, lockedVal]
     );
 
     return NextResponse.json(
@@ -86,8 +89,8 @@ export async function POST(request) {
           id: result.insertId,
           event_id: Number(event_id),
           name: name.trim(),
-          price: Number(price),
-          quota: Number(quota),
+          price: cleanPrice,
+          quota: cleanQuota,
           sold: 0,
           locked: Boolean(lockedVal),
         },
