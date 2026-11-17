@@ -14,30 +14,44 @@ export default function RegisterPage() {
   const handleSubmit = async (e) => {
     e.preventDefault();
 
-    if (!name || !email || !password) {
+    if (!name.trim() || !email.trim() || !password.trim()) {
       alert("Semua data wajib diisi!");
+      return;
+    }
+
+    if (password.length < 6) {
+      alert("Password minimal 6 karakter!");
       return;
     }
 
     setLoading(true);
 
     try {
-      const response = await fetch("http://localhost:3000/api/auth/register", {
+      // Backend Express / Next API berjalan di port 3000
+      const apiUrl =
+        process.env.NEXT_PUBLIC_API_URL || "http://localhost:3000";
+
+      const response = await fetch(`${apiUrl}/api/auth/register`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
         },
         body: JSON.stringify({
-          name,
-          email,
+          name: name.trim(),
+          email: email.trim(),
           password,
         }),
       });
 
-      const data = await response.json();
+      let data;
+      try {
+        data = await response.json();
+      } catch {
+        throw new Error("Respon server tidak valid");
+      }
 
       if (response.ok && data.success) {
-        alert(data.message);
+        alert(data.message || "Registrasi berhasil! Silakan login.");
 
         setName("");
         setEmail("");
@@ -45,11 +59,15 @@ export default function RegisterPage() {
 
         window.location.href = "/login";
       } else {
-        alert(data.message);
+        alert(data.message || "Gagal melakukan registrasi");
       }
     } catch (error) {
-      console.error(error);
-      alert("Gagal terhubung ke server");
+      console.error("Register Error:", error);
+      alert(
+        error.message === "Respon server tidak valid"
+          ? "Respon server tidak valid"
+          : "Gagal terhubung ke server backend (port 3000). Pastikan backend aktif!"
+      );
     } finally {
       setLoading(false);
     }
@@ -129,7 +147,7 @@ export default function RegisterPage() {
                     type={showPassword ? "text" : "password"}
                     value={password}
                     onChange={(e) => setPassword(e.target.value)}
-                    placeholder="Enter your password"
+                    placeholder="Enter your password (min 6 chars)"
                     className="w-full rounded-xl bg-white/90 pl-4 pr-11 py-3 text-black placeholder:text-gray-500 outline-none"
                   />
                   <button

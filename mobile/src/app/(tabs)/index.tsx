@@ -1,11 +1,16 @@
+import { useAuth } from "@/context/AuthContext";
+import { apiGet } from "@/lib/api";
+import { getWishlist, saveWishlist, WishlistItem } from "@/lib/storage";
 import { useRouter } from "expo-router";
-import { useState } from "react";
+import { StatusBar } from "expo-status-bar";
+import { useCallback, useEffect, useState } from "react";
 import {
+  ActivityIndicator,
   Image,
   ImageBackground,
   Pressable,
+  RefreshControl,
   ScrollView,
-  StatusBar,
   StyleSheet,
   Text,
   TextInput,
@@ -21,88 +26,176 @@ const COLORS = {
   white: "#FFFFFF",
 };
 
-const categories = ["All", "Pop", "Rock", "Jazz", "Electronic"];
+const categories = ["All", "Pop", "Rock", "Jazz", "Electronic", "Festival"];
 
-const concerts = [
-  {
-    id: "1",
-    title: "Jazz Malam Selatan",
-    artist: "Jakarta Jazz Collective",
-    city: "Jakarta",
-    price: "Rp500.000",
-    date: "NOV 28",
-    category: "Jazz",
-    image: "https://images.unsplash.com/photo-1415201364774-f6f0bb35f28f?w=600",
-  },
-  {
-    id: "2",
-    title: "Suara Beton",
-    artist: "Monokrom",
-    city: "Bandung",
-    price: "Rp300.000",
-    date: "NOV 29",
-    category: "Rock",
-    image: "https://images.unsplash.com/photo-1501386761578-eac5c94b800a?w=600",
-  },
-  {
-    id: "3",
-    title: "Midnight Echo",
-    artist: "Raka & The Hollow",
-    city: "Jakarta",
-    price: "Rp250.000",
-    date: "DEC 04",
-    category: "Pop",
-    image: "https://images.unsplash.com/photo-1459749411175-04bf5292ceea?w=600",
-  },
-];
+type EventItem = {
+  id: number;
+  title: string;
+  artist_name: string;
+  artist_genre: string;
+  venue: string;
+  event_date: string;
+  banner_url: string;
+  min_price?: number;
+};
 
-const artists = [
-  {
-    name: "Aurora Lestari",
-    image: "https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=300",
-  },
-  {
-    name: "Jakarta Jazz Collective",
-    image: "https://images.unsplash.com/photo-1500648767791-00dcc994a43e?w=300",
-  },
-  {
-    name: "Monokrom",
-    image: "https://images.unsplash.com/photo-1506794778202-cad84cf45f1d?w=300",
-  },
-  {
-    name: "Raka & The Hollow",
-    image: "https://images.unsplash.com/photo-1504593811423-6dd665756598?w=300",
-  },
-];
+type ArtistItem = {
+  id: number;
+  name: string;
+  genre: string;
+  image_url?: string;
+  concert_count?: number;
+};
+
+const FALLBACK_IMAGE =
+  "https://images.unsplash.com/photo-1506157786151-b8491531f063?w=800";
+const FALLBACK_AVATAR =
+  "https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=300";
+
+function formatEventDate(dateStr: string): string {
+  try {
+    const d = new Date(dateStr);
+    return d
+      .toLocaleDateString("en-GB", { day: "2-digit", month: "short" })
+      .toUpperCase();
+  } catch {
+    return dateStr;
+  }
+}
+
+function formatPrice(price?: number): string {
+  if (!price) return "See prices";
+  return "Rp" + price.toLocaleString("id-ID");
+}
+
+function extractCity(venue: string): string {
+  const parts = venue.split(",");
+  return parts[parts.length - 1]?.trim() || venue;
+}
 
 const cities = ["Jakarta", "Bandung", "Surabaya", "Denpasar"];
 
 export default function HomeScreen() {
   const router = useRouter();
+  const { user } = useAuth();
 
   const [selectedCategory, setSelectedCategory] = useState("All");
   const [search, setSearch] = useState("");
-  const [favorite, setFavorite] = useState(false);
+  const [events, setEvents] = useState<EventItem[]>([]);
+  const [artists, setArtists] = useState<ArtistItem[]>([]);
+  const [wishlistIds, setWishlistIds] = useState<Set<string>>(new Set());
+  const [loading, setLoading] = useState(true);
+  const [refreshing, setRefreshing] = useState(false);
 
-  const filteredConcerts = concerts.filter((concert) => {
+  const loadData = useCallback(async () => {
+    try {
+      const [eventsRes, artistsRes] = await Promise.all([
+        apiGet<EventItem[]>("/api/events"),
+        apiGet<ArtistItem[]>("/api/artists"),
+      ]);
+
+      if (eventsRes.success && Array.isArray(eventsRes.data)) {
+        setEvents(eventsRes.data);
+      }
+      if (artistsRes.success && Array.isArray(artistsRes.data)) {
+        setArtists(artistsRes.data);
+      }
+
+      const wl = await getWishlist();
+      setWishlistIds(new Set(wl.map((w) => String(w.id))));
+    } catch (err) {
+      console.error("HomeScreen loadData error:", err);
+    } finally {
+      setLoading(false);
+      setRefreshing(false);
+    }
+  }, []);
+
+  useEffect(() => {
+    loadData();
+  }, [loadData]);
+
+  const onRefresh = useCallback(() => {
+    setRefreshing(true);
+    loadData();
+  }, [loadData]);
+
+  const toggleWishlist = useCallback(
+    async (event: EventItem) => {
+      const id = String(event.id);
+      const current = await getWishlist();
+      let updated: WishlistItem[];
+
+      if (wishlistIds.has(id)) {
+        updated = current.filter((w) => w.id !== id);
+      } else {
+        const item: WishlistItem = {
+          id,
+          title: event.title,
+          artist: event.artist_name,
+          date: formatEventDate(event.event_date),
+          venue: event.venue,
+          price: event.min_price || 0,
+          image: event.banner_url || FALLBACK_IMAGE,
+          category: event.artist_genre || "Music",
+          savedAt: Date.now(),
+        };
+        updated = [item, ...current];
+      }
+
+      await saveWishlist(updated);
+      setWishlistIds(new Set(updated.map((w) => w.id)));
+    },
+    [wishlistIds]
+  );
+
+  const filteredEvents = events.filter((e) => {
+    const genre = e.artist_genre?.toLowerCase() || "";
     const matchesCategory =
-      selectedCategory === "All" || concert.category === selectedCategory;
+      selectedCategory === "All" ||
+      genre.includes(selectedCategory.toLowerCase()) ||
+      (selectedCategory === "Festival" && e.title.toLowerCase().includes("fest"));
 
+    const q = search.toLowerCase();
     const matchesSearch =
-      concert.title.toLowerCase().includes(search.toLowerCase()) ||
-      concert.artist.toLowerCase().includes(search.toLowerCase()) ||
-      concert.city.toLowerCase().includes(search.toLowerCase());
+      !q ||
+      e.title.toLowerCase().includes(q) ||
+      e.artist_name.toLowerCase().includes(q) ||
+      e.venue.toLowerCase().includes(q);
 
     return matchesCategory && matchesSearch;
   });
 
+  const featuredEvent = events[0];
+  const upcomingEvents = filteredEvents;
+
+  const greeting = (() => {
+    const h = new Date().getHours();
+    if (h < 12) return "Good morning";
+    if (h < 17) return "Good afternoon";
+    return "Good evening";
+  })();
+
+  const firstName = user?.name?.split(" ")[0] || "there";
+
+  if (loading) {
+    return (
+      <View style={[styles.container, { justifyContent: "center", alignItems: "center" }]}>
+        <ActivityIndicator size="large" color={COLORS.purple} />
+      </View>
+    );
+  }
+
   return (
     <View style={styles.container}>
-      <StatusBar barStyle="dark-content" backgroundColor={COLORS.background} />
+      <StatusBar style="dark" />
 
       <ScrollView
         showsVerticalScrollIndicator={false}
         contentContainerStyle={styles.scrollContent}
+        refreshControl={
+          <RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={COLORS.purple} />
+        }
       >
         {/* HEADER */}
         <View style={styles.header}>
@@ -113,14 +206,21 @@ export default function HomeScreen() {
             <Text style={styles.brandName}>Nocturne</Text>
           </View>
 
-          <View style={styles.avatar}>
-            <Text style={styles.avatarText}>N</Text>
-          </View>
+          <Pressable
+            style={styles.avatar}
+            onPress={() => router.push("/(tabs)/profile")}
+          >
+            <Text style={styles.avatarText}>
+              {(user?.name?.[0] || "N").toUpperCase()}
+            </Text>
+          </Pressable>
         </View>
 
         {/* GREETING */}
         <View style={styles.greeting}>
-          <Text style={styles.greetingTitle}>Good morning, Naira</Text>
+          <Text style={styles.greetingTitle}>
+            {greeting}, {firstName}
+          </Text>
           <Text style={styles.subtitle}>Find your next night out.</Text>
         </View>
 
@@ -164,62 +264,87 @@ export default function HomeScreen() {
         </ScrollView>
 
         {/* FEATURED CONCERT */}
-        <View style={styles.featuredCard}>
-          <ImageBackground
-            source={{
-              uri: "https://images.unsplash.com/photo-1506157786151-b8491531f063?w=1000",
-            }}
-            style={styles.featuredImage}
-            imageStyle={styles.featuredImageRadius}
+        {featuredEvent && (
+          <Pressable
+            style={styles.featuredCard}
+            onPress={() =>
+              router.push({
+                pathname: "/event-detail",
+                params: { id: String(featuredEvent.id) },
+              })
+            }
           >
-            <View style={styles.featuredOverlay} />
+            <ImageBackground
+              source={{ uri: featuredEvent.banner_url || FALLBACK_IMAGE }}
+              style={styles.featuredImage}
+              imageStyle={styles.featuredImageRadius}
+            >
+              <View style={styles.featuredOverlay} />
 
-            <View style={styles.featuredTop}>
-              <View style={styles.featuredBadge}>
-                <Text style={styles.featuredBadgeText}>☆ Featured</Text>
+              <View style={styles.featuredTop}>
+                <View style={styles.featuredBadge}>
+                  <Text style={styles.featuredBadgeText}>☆ Featured</Text>
+                </View>
+
+                <Pressable
+                  onPress={() => toggleWishlist(featuredEvent)}
+                  style={styles.favoriteButton}
+                >
+                  <Text style={styles.favoriteIcon}>
+                    {wishlistIds.has(String(featuredEvent.id)) ? "♥" : "♡"}
+                  </Text>
+                </Pressable>
+              </View>
+
+              <View style={styles.featuredDate}>
+                <Text style={styles.featuredDateText}>
+                  {formatEventDate(featuredEvent.event_date)}
+                </Text>
+              </View>
+
+              <View style={styles.featuredInfo}>
+                <Text style={styles.featuredTitle}>{featuredEvent.title}</Text>
+                <Text style={styles.featuredArtist}>
+                  {featuredEvent.artist_name}
+                </Text>
+                <Text style={styles.featuredLocation}>
+                  {formatEventDate(featuredEvent.event_date)} ·{" "}
+                  {featuredEvent.venue}
+                </Text>
+              </View>
+            </ImageBackground>
+
+            <View style={styles.ticketFooter}>
+              <View>
+                <Text style={styles.ticketDate}>
+                  {formatEventDate(featuredEvent.event_date)} ·{" "}
+                  {extractCity(featuredEvent.venue).toUpperCase()}
+                </Text>
+                <Text style={styles.ticketPrice}>
+                  From {formatPrice(featuredEvent.min_price)}
+                </Text>
               </View>
 
               <Pressable
-                onPress={() => setFavorite(!favorite)}
-                style={styles.favoriteButton}
+                style={styles.ticketButton}
+                onPress={() =>
+                  router.push({
+                    pathname: "/select-tickets",
+                    params: { id: String(featuredEvent.id) },
+                  })
+                }
               >
-                <Text style={styles.favoriteIcon}>{favorite ? "♥" : "♡"}</Text>
+                <Text style={styles.ticketButtonText}>Get Tickets</Text>
               </Pressable>
             </View>
-
-            <View style={styles.featuredDate}>
-              <Text style={styles.featuredDateText}>NOV 21</Text>
-            </View>
-
-            <View style={styles.featuredInfo}>
-              <Text style={styles.featuredTitle}>Neon Skyline World Tour</Text>
-              <Text style={styles.featuredArtist}>Aurora Lestari</Text>
-              <Text style={styles.featuredLocation}>
-                21 NOV · 19:30 WIB · Istora Senayan, Jakarta
-              </Text>
-            </View>
-          </ImageBackground>
-
-          <View style={styles.ticketFooter}>
-            <View>
-              <Text style={styles.ticketDate}>NOV 21 · JAKARTA</Text>
-              <Text style={styles.ticketPrice}>From Rp850.000</Text>
-            </View>
-
-            <Pressable
-              style={styles.ticketButton}
-              onPress={() => router.push("/select-tickets")}
-            >
-              <Text style={styles.ticketButtonText}>Get Tickets</Text>
-            </Pressable>
-          </View>
-        </View>
+          </Pressable>
+        )}
 
         {/* UPCOMING CONCERTS */}
         <View style={styles.section}>
           <View style={styles.sectionHeader}>
             <Text style={styles.sectionTitle}>Upcoming Concerts</Text>
-            <Pressable>
+            <Pressable onPress={() => router.push("/(tabs)/explore")}>
               <Text style={styles.seeAll}>See all ›</Text>
             </Pressable>
           </View>
@@ -229,35 +354,46 @@ export default function HomeScreen() {
             showsHorizontalScrollIndicator={false}
             contentContainerStyle={styles.concertList}
           >
-            {filteredConcerts.map((concert) => (
+            {upcomingEvents.map((event) => (
               <Pressable
-                key={concert.id}
+                key={event.id}
                 style={styles.concertCard}
-                onPress={() => router.push("/event-detail")}
+                onPress={() =>
+                  router.push({
+                    pathname: "/event-detail",
+                    params: { id: String(event.id) },
+                  })
+                }
               >
                 <View>
                   <Image
-                    source={{ uri: concert.image }}
+                    source={{ uri: event.banner_url || FALLBACK_IMAGE }}
                     style={styles.concertImage}
                   />
                   <View style={styles.concertDateBadge}>
-                    <Text style={styles.concertDateText}>{concert.date}</Text>
+                    <Text style={styles.concertDateText}>
+                      {formatEventDate(event.event_date)}
+                    </Text>
                   </View>
                 </View>
 
                 <Text style={styles.concertTitle} numberOfLines={1}>
-                  {concert.title}
+                  {event.title}
                 </Text>
                 <Text style={styles.concertArtist} numberOfLines={1}>
-                  {concert.artist}
+                  {event.artist_name}
                 </Text>
-                <Text style={styles.concertCity}>{concert.city}</Text>
-                <Text style={styles.concertPrice}>From {concert.price}</Text>
+                <Text style={styles.concertCity}>
+                  {extractCity(event.venue)}
+                </Text>
+                <Text style={styles.concertPrice}>
+                  From {formatPrice(event.min_price)}
+                </Text>
               </Pressable>
             ))}
           </ScrollView>
 
-          {filteredConcerts.length === 0 && (
+          {upcomingEvents.length === 0 && (
             <Text style={styles.emptyText}>No concerts found.</Text>
           )}
         </View>
@@ -266,9 +402,6 @@ export default function HomeScreen() {
         <View style={styles.section}>
           <View style={styles.sectionHeader}>
             <Text style={styles.sectionTitle}>Popular Artists</Text>
-            <Pressable>
-              <Text style={styles.seeAll}>See all ›</Text>
-            </Pressable>
           </View>
 
           <ScrollView
@@ -276,14 +409,19 @@ export default function HomeScreen() {
             showsHorizontalScrollIndicator={false}
             contentContainerStyle={styles.artistList}
           >
-            {artists.map((artist, index) => (
+            {artists.map((artist) => (
               <Pressable
-                key={index}
+                key={artist.id}
                 style={styles.artistItem}
-                onPress={() => router.push("/artist")}
+                onPress={() =>
+                  router.push({
+                    pathname: "/artist",
+                    params: { id: String(artist.id) },
+                  })
+                }
               >
                 <Image
-                  source={{ uri: artist.image }}
+                  source={{ uri: artist.image_url || FALLBACK_AVATAR }}
                   style={styles.artistImage}
                 />
                 <Text style={styles.artistName} numberOfLines={2}>
@@ -303,9 +441,7 @@ export default function HomeScreen() {
               <Pressable
                 key={city}
                 style={styles.cityChip}
-                onPress={() => {
-                  setSearch(city);
-                }}
+                onPress={() => setSearch(city)}
               >
                 <Text style={styles.cityIcon}>⌖</Text>
                 <Text style={styles.cityText}>{city}</Text>
@@ -338,15 +474,9 @@ export default function HomeScreen() {
 }
 
 const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: COLORS.background,
-  },
+  container: { flex: 1, backgroundColor: COLORS.background },
 
-  scrollContent: {
-    paddingTop: 12,
-    paddingBottom: 30,
-  },
+  scrollContent: { paddingTop: 12, paddingBottom: 30 },
 
   header: {
     flexDirection: "row",
@@ -356,11 +486,7 @@ const styles = StyleSheet.create({
     marginBottom: 14,
   },
 
-  brand: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 10,
-  },
+  brand: { flexDirection: "row", alignItems: "center", gap: 10 },
 
   logo: {
     width: 32,
@@ -371,17 +497,9 @@ const styles = StyleSheet.create({
     justifyContent: "center",
   },
 
-  logoText: {
-    color: COLORS.white,
-    fontSize: 17,
-    fontWeight: "700",
-  },
+  logoText: { color: COLORS.white, fontSize: 17, fontWeight: "700" },
 
-  brandName: {
-    fontSize: 21,
-    fontWeight: "700",
-    color: COLORS.text,
-  },
+  brandName: { fontSize: 21, fontWeight: "700", color: COLORS.text },
 
   avatar: {
     width: 40,
@@ -398,10 +516,7 @@ const styles = StyleSheet.create({
     color: COLORS.purple,
   },
 
-  greeting: {
-    paddingHorizontal: 20,
-    marginBottom: 17,
-  },
+  greeting: { paddingHorizontal: 20, marginBottom: 17 },
 
   greetingTitle: {
     fontSize: 28,
@@ -410,11 +525,7 @@ const styles = StyleSheet.create({
     letterSpacing: -1,
   },
 
-  subtitle: {
-    fontSize: 15,
-    color: COLORS.secondary,
-    marginTop: 4,
-  },
+  subtitle: { fontSize: 15, color: COLORS.secondary, marginTop: 4 },
 
   searchBox: {
     height: 48,
@@ -432,23 +543,11 @@ const styles = StyleSheet.create({
     shadowRadius: 8,
   },
 
-  searchIcon: {
-    fontSize: 25,
-    color: COLORS.secondary,
-    marginRight: 10,
-  },
+  searchIcon: { fontSize: 25, color: COLORS.secondary, marginRight: 10 },
 
-  searchInput: {
-    flex: 1,
-    fontSize: 14,
-    color: COLORS.text,
-  },
+  searchInput: { flex: 1, fontSize: 14, color: COLORS.text },
 
-  categoryScroll: {
-    marginTop: 17,
-    marginBottom: 28,
-    paddingLeft: 20,
-  },
+  categoryScroll: { marginTop: 17, marginBottom: 28, paddingLeft: 20 },
 
   categoryButton: {
     paddingHorizontal: 17,
@@ -467,15 +566,9 @@ const styles = StyleSheet.create({
     borderColor: COLORS.purple,
   },
 
-  categoryText: {
-    fontSize: 13,
-    fontWeight: "600",
-    color: COLORS.text,
-  },
+  categoryText: { fontSize: 13, fontWeight: "600", color: COLORS.text },
 
-  categoryTextActive: {
-    color: COLORS.white,
-  },
+  categoryTextActive: { color: COLORS.white },
 
   featuredCard: {
     marginHorizontal: 20,
@@ -501,7 +594,11 @@ const styles = StyleSheet.create({
   },
 
   featuredOverlay: {
-    ...StyleSheet.absoluteFillObject,
+    position: "absolute",
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
     backgroundColor: "rgba(28, 5, 43, 0.32)",
   },
 
@@ -518,11 +615,7 @@ const styles = StyleSheet.create({
     borderRadius: 20,
   },
 
-  featuredBadgeText: {
-    color: COLORS.white,
-    fontSize: 12,
-    fontWeight: "600",
-  },
+  featuredBadgeText: { color: COLORS.white, fontSize: 12, fontWeight: "600" },
 
   favoriteButton: {
     width: 44,
@@ -533,10 +626,7 @@ const styles = StyleSheet.create({
     justifyContent: "center",
   },
 
-  favoriteIcon: {
-    color: COLORS.white,
-    fontSize: 25,
-  },
+  favoriteIcon: { color: COLORS.white, fontSize: 25 },
 
   featuredDate: {
     position: "absolute",
@@ -554,9 +644,7 @@ const styles = StyleSheet.create({
     fontWeight: "800",
   },
 
-  featuredInfo: {
-    marginBottom: 2,
-  },
+  featuredInfo: { marginBottom: 2 },
 
   featuredTitle: {
     fontSize: 24,
@@ -565,17 +653,9 @@ const styles = StyleSheet.create({
     letterSpacing: -0.5,
   },
 
-  featuredArtist: {
-    fontSize: 13,
-    color: COLORS.white,
-    marginTop: 5,
-  },
+  featuredArtist: { fontSize: 13, color: COLORS.white, marginTop: 5 },
 
-  featuredLocation: {
-    fontSize: 11,
-    color: "#D4C8DD",
-    marginTop: 5,
-  },
+  featuredLocation: { fontSize: 11, color: "#D4C8DD", marginTop: 5 },
 
   ticketFooter: {
     padding: 16,
@@ -610,9 +690,7 @@ const styles = StyleSheet.create({
     fontSize: 14,
   },
 
-  section: {
-    marginBottom: 30,
-  },
+  section: { marginBottom: 30 },
 
   sectionHeader: {
     paddingHorizontal: 20,
@@ -629,27 +707,13 @@ const styles = StyleSheet.create({
     letterSpacing: -0.5,
   },
 
-  seeAll: {
-    fontSize: 13,
-    fontWeight: "600",
-    color: "#841BFF",
-  },
+  seeAll: { fontSize: 13, fontWeight: "600", color: "#841BFF" },
 
-  concertList: {
-    paddingLeft: 20,
-    paddingRight: 20,
-  },
+  concertList: { paddingLeft: 20, paddingRight: 20 },
 
-  concertCard: {
-    width: 152,
-    marginRight: 12,
-  },
+  concertCard: { width: 152, marginRight: 12 },
 
-  concertImage: {
-    width: 152,
-    height: 190,
-    borderRadius: 15,
-  },
+  concertImage: { width: 152, height: 190, borderRadius: 15 },
 
   concertDateBadge: {
     position: "absolute",
@@ -674,17 +738,9 @@ const styles = StyleSheet.create({
     marginTop: 10,
   },
 
-  concertArtist: {
-    color: COLORS.secondary,
-    fontSize: 12,
-    marginTop: 4,
-  },
+  concertArtist: { color: COLORS.secondary, fontSize: 12, marginTop: 4 },
 
-  concertCity: {
-    color: COLORS.secondary,
-    fontSize: 12,
-    marginTop: 2,
-  },
+  concertCity: { color: COLORS.secondary, fontSize: 12, marginTop: 2 },
 
   concertPrice: {
     color: COLORS.purple,
@@ -693,21 +749,11 @@ const styles = StyleSheet.create({
     marginTop: 6,
   },
 
-  emptyText: {
-    color: COLORS.secondary,
-    paddingHorizontal: 20,
-    marginTop: 10,
-  },
+  emptyText: { color: COLORS.secondary, paddingHorizontal: 20, marginTop: 10 },
 
-  artistList: {
-    paddingHorizontal: 20,
-  },
+  artistList: { paddingHorizontal: 20 },
 
-  artistItem: {
-    width: 82,
-    alignItems: "center",
-    marginRight: 12,
-  },
+  artistItem: { width: 82, alignItems: "center", marginRight: 12 },
 
   artistImage: {
     width: 62,
@@ -742,17 +788,9 @@ const styles = StyleSheet.create({
     paddingVertical: 12,
   },
 
-  cityIcon: {
-    fontSize: 17,
-    color: COLORS.purple,
-    marginRight: 7,
-  },
+  cityIcon: { fontSize: 17, color: COLORS.purple, marginRight: 7 },
 
-  cityText: {
-    color: COLORS.purple,
-    fontSize: 13,
-    fontWeight: "600",
-  },
+  cityText: { color: COLORS.purple, fontSize: 13, fontWeight: "600" },
 
   aboutCard: {
     marginHorizontal: 20,
@@ -775,20 +813,11 @@ const styles = StyleSheet.create({
     marginRight: 12,
   },
 
-  aboutMusicIcon: {
-    fontSize: 22,
-    color: COLORS.purple,
-  },
+  aboutMusicIcon: { fontSize: 22, color: COLORS.purple },
 
-  aboutContent: {
-    flex: 1,
-  },
+  aboutContent: { flex: 1 },
 
-  aboutTitle: {
-    color: COLORS.text,
-    fontSize: 17,
-    fontWeight: "700",
-  },
+  aboutTitle: { color: COLORS.text, fontSize: 17, fontWeight: "700" },
 
   aboutDescription: {
     color: COLORS.secondary,
@@ -797,10 +826,5 @@ const styles = StyleSheet.create({
     marginTop: 5,
   },
 
-  learnMore: {
-    color: "#841BFF",
-    fontSize: 13,
-    fontWeight: "700",
-    marginTop: 9,
-  },
+  learnMore: { color: "#841BFF", fontSize: 13, fontWeight: "700", marginTop: 8 },
 });

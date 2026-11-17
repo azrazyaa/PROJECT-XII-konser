@@ -537,7 +537,7 @@ export default function ScannerPage() {
   ======================================================= */
 
   const processTicketVerification = useCallback(
-    (rawScanValue) => {
+    async (rawScanValue) => {
       const ticketId = extractTicketId(rawScanValue);
       setScannedRawText(ticketId || rawScanValue);
 
@@ -551,7 +551,58 @@ export default function ScannerPage() {
         return;
       }
 
-      // Pencocokan data tiket case-insensitive
+      // 1. Coba verifikasi ke API Backend database terlebih dahulu
+      try {
+        const res = await fetch("/api/scan", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ ticket_code: ticketId }),
+        });
+        const data = await res.json();
+
+        if (data.success && data.ticket) {
+          const t = data.ticket;
+          const mappedTicket = {
+            id: t.ticket_code,
+            customer: t.customer_name || "Pemegang Tiket",
+            event: t.event_title || "Konser Nocturne",
+            ticketClass: t.category_name || "VIP / Festival",
+            seat: "General Access",
+            status: "used",
+            scannedAt: t.scanned_at || new Date().toLocaleTimeString("id-ID") + " WIB",
+          };
+
+          setMatchedTicket(mappedTicket);
+          setScanStatus({
+            type: "success",
+            message: "Tiket berhasil dipindai",
+            detail: `Tiket valid atas nama ${mappedTicket.customer} (${mappedTicket.event} - ${mappedTicket.ticketClass}). Pengunjung diizinkan masuk venue.`,
+          });
+          return;
+        } else if (data.status === "already_used") {
+          const t = data.ticket || {};
+          const mappedTicket = {
+            id: t.ticket_code || ticketId,
+            customer: t.customer_name || "Pengunjung",
+            event: t.event_title || "Konser",
+            ticketClass: t.category_name || "Ticket",
+            seat: "-",
+            status: "used",
+            scannedAt: t.scanned_at || "Sesi sebelumnya",
+          };
+          setMatchedTicket(mappedTicket);
+          setScanStatus({
+            type: "used",
+            message: "Tiket sudah digunakan",
+            detail: `Tiket ini telah dipindai sebelumnya pada ${mappedTicket.scannedAt}. Pengunjung tidak dapat masuk kembali.`,
+          });
+          return;
+        }
+      } catch (err) {
+        console.warn("API scan error, falling back to local:", err);
+      }
+
+      // 2. Fallback pencocokan data tiket lokal (demo data)
       let existing = ticketsData[ticketId];
       let resolvedKey = ticketId;
       if (!existing) {
@@ -565,7 +616,7 @@ export default function ScannerPage() {
       }
 
       if (!existing) {
-        // 8. Jika QR Code tidak dikenali:
+        // Jika QR Code tidak dikenali:
         setMatchedTicket(null);
         setScanStatus({
           type: "invalid",
@@ -575,7 +626,7 @@ export default function ScannerPage() {
         return;
       }
 
-      // 9. Jika tiket sudah pernah digunakan:
+      // Jika tiket sudah pernah digunakan:
       if (existing.status === "used") {
         setMatchedTicket(existing);
         setScanStatus({
@@ -588,7 +639,7 @@ export default function ScannerPage() {
         return;
       }
 
-      // 10. Jika tiket valid dan belum digunakan:
+      // Jika tiket valid dan belum digunakan:
       const nowStr =
         new Date().toLocaleString("id-ID", {
           day: "numeric",
