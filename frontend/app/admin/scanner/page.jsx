@@ -11,24 +11,19 @@ import {
   Camera,
   CheckCircle2,
   ChevronDown,
-  Copy,
   CreditCard,
-  Image as ImageIcon,
+  FlipHorizontal,
   Inbox,
   LayoutDashboard,
-  LogOut,
   MapPin,
   QrCode,
-  RefreshCw,
   RotateCw,
   ScanLine,
   Search,
   Settings,
   ShieldCheck,
-  SwitchCamera,
   Tag,
   Ticket,
-  Upload,
   User,
   X,
   XCircle,
@@ -494,9 +489,10 @@ export default function ScannerPage() {
 
   // Status Scanner & Kamera
   const [scanning, setScanning] = useState(false);
-  const [cameras, setCameras] = useState([]);
-  const [selectedCameraId, setSelectedCameraId] = useState("");
   const [cameraError, setCameraError] = useState("");
+
+  // Opsi Anti-Mirror: default true (scaleX(-1)) agar teks & arah tidak terbalik
+  const [isMirrored, setIsMirrored] = useState(true);
 
   // Data Tiket & Status Scan
   const [ticketsData, setTicketsData] = useState(INITIAL_TICKETS);
@@ -515,37 +511,6 @@ export default function ScannerPage() {
   const isStartingRef = useRef(false);
   const lastScannedRef = useRef("");
   const lastScanTimeRef = useRef(0);
-  const fileInputRef = useRef(null);
-
-  /* =======================================================
-     CEK KAMERA TANPA MENGUNCI WEBCAM PADA MOUNT
-  ======================================================= */
-
-  useEffect(() => {
-    let mounted = true;
-    async function initCheckDevices() {
-      try {
-        if (typeof navigator !== "undefined" && navigator?.mediaDevices?.enumerateDevices) {
-          const allDevices = await navigator.mediaDevices.enumerateDevices();
-          const videoDevices = allDevices.filter((d) => d.kind === "videoinput");
-          if (mounted && videoDevices.length > 0) {
-            setCameras(
-              videoDevices.map((d, i) => ({
-                id: d.deviceId,
-                label: d.label || `Kamera ${i + 1}`,
-              }))
-            );
-          }
-        }
-      } catch (e) {
-        console.warn("Device enumeration check:", e);
-      }
-    }
-    initCheckDevices();
-    return () => {
-      mounted = false;
-    };
-  }, []);
 
   /* =======================================================
      STOP SCANNER
@@ -655,17 +620,17 @@ export default function ScannerPage() {
   );
 
   /* =======================================================
-     START SCANNER (DENGAN MULTI-FALLBACK LAPTOP & HP)
+     START SCANNER (MULTI-FALLBACK LAPTOP & HP)
   ======================================================= */
 
-  const startScanner = async (overrideCameraId = null) => {
+  const startScanner = async () => {
     setCameraError("");
 
     if (isStartingRef.current) return;
     isStartingRef.current = true;
 
     try {
-      // 1. Bersihkan scanner lama jika masih berjalan
+      // 1. Bersihkan scanner lama jika masih aktif
       if (html5QrCodeRef.current) {
         try {
           if (html5QrCodeRef.current.isScanning) {
@@ -710,45 +675,27 @@ export default function ScannerPage() {
       };
 
       const scanConfig = {
-        fps: 15, // frame scanning responsif tanpa batasan qrbox kaku
+        fps: 15, // frame scanning responsif
+        disableFlip: true, // Nonaktifkan internal flip
       };
 
       setScanning(true);
-
-      const targetCamId = overrideCameraId || selectedCameraId;
       let started = false;
 
-      // Percobaan 1: Gunakan targetCamId jika sudah dipilih
-      if (targetCamId) {
-        try {
-          await html5QrCode.start(
-            targetCamId,
-            scanConfig,
-            onScanSuccess,
-            onScanFailure
-          );
-          started = true;
-        } catch (e) {
-          console.warn("Gagal start dengan targetCamId, mencoba fallback:", e);
-        }
+      // Percobaan 1: Coba facingMode environment (ideal untuk HP)
+      try {
+        await html5QrCode.start(
+          { facingMode: "environment" },
+          scanConfig,
+          onScanSuccess,
+          onScanFailure
+        );
+        started = true;
+      } catch (e) {
+        console.warn("Gagal start facingMode environment, mencoba facingMode user:", e);
       }
 
-      // Percobaan 2: Coba facingMode environment (ideal untuk HP kamera belakang)
-      if (!started) {
-        try {
-          await html5QrCode.start(
-            { facingMode: "environment" },
-            scanConfig,
-            onScanSuccess,
-            onScanFailure
-          );
-          started = true;
-        } catch (e) {
-          console.warn("Gagal start facingMode environment, mencoba facingMode user:", e);
-        }
-      }
-
-      // Percobaan 3: Coba facingMode user (ideal untuk laptop webcam)
+      // Percobaan 2: Coba facingMode user (ideal untuk webcam laptop)
       if (!started) {
         try {
           await html5QrCode.start(
@@ -763,7 +710,7 @@ export default function ScannerPage() {
         }
       }
 
-      // Percobaan 4: Ambil daftar device dan coba ID kamera pertama
+      // Percobaan 3: Ambil ID kamera pertama
       if (!started) {
         const devs = await Html5Qrcode.getCameras();
         if (devs && devs.length > 0) {
@@ -777,19 +724,6 @@ export default function ScannerPage() {
         } else {
           throw new Error("Tidak ada kamera yang dapat diakses pada perangkat ini.");
         }
-      }
-
-      // Setelah izin sukses diberikan, perbarui dropdown kamera dengan nama lengkap
-      try {
-        const finalDevices = await Html5Qrcode.getCameras();
-        if (finalDevices && finalDevices.length > 0) {
-          setCameras(finalDevices);
-          if (!selectedCameraId) {
-            setSelectedCameraId(finalDevices[0].id);
-          }
-        }
-      } catch (e) {
-        // Abaikan jika tidak diizinkan
       }
     } catch (err) {
       console.error("Camera startup error:", err);
@@ -820,85 +754,6 @@ export default function ScannerPage() {
       }
     } finally {
       isStartingRef.current = false;
-    }
-  };
-
-  /* =======================================================
-     GANTI KAMERA (SWITCH CAMERA)
-  ======================================================= */
-
-  const handleSwitchCamera = async () => {
-    let currentCameras = cameras;
-    if (currentCameras.length <= 1) {
-      try {
-        const freshDevs = await Html5Qrcode.getCameras();
-        if (freshDevs && freshDevs.length > 0) {
-          setCameras(freshDevs);
-          currentCameras = freshDevs;
-        }
-      } catch (e) {}
-    }
-
-    if (currentCameras.length <= 1) {
-      alert("Hanya 1 kamera yang terdeteksi pada perangkat Anda.");
-      return;
-    }
-
-    const currentIndex = currentCameras.findIndex((c) => c.id === selectedCameraId);
-    const nextIndex = (currentIndex + 1) % currentCameras.length;
-    const nextCamera = currentCameras[nextIndex];
-
-    setSelectedCameraId(nextCamera.id);
-
-    if (scanning) {
-      await startScanner(nextCamera.id);
-    }
-  };
-
-  const handleCameraSelectChange = async (e) => {
-    const newId = e.target.value;
-    setSelectedCameraId(newId);
-    if (scanning) {
-      await startScanner(newId);
-    }
-  };
-
-  /* =======================================================
-     UNGGAH & SCAN FILE GAMBAR QR CODE
-  ======================================================= */
-
-  const handleFileUploadScan = async (e) => {
-    const file = e.target.files?.[0];
-    if (!file) return;
-
-    try {
-      setCameraError("");
-      await stopScanner();
-
-      const html5QrCode = new Html5Qrcode("qr-reader", {
-        formatsToSupport: [Html5QrcodeSupportedFormats.QR_CODE],
-        verbose: false,
-      });
-
-      const decodedText = await html5QrCode.scanFile(file, false);
-      html5QrCode.clear();
-
-      if (decodedText) {
-        playScanBeep();
-        processTicketVerification(decodedText);
-      }
-    } catch (err) {
-      console.warn("File scan error:", err);
-      setScanStatus({
-        type: "invalid",
-        message: "QR Code tidak valid",
-        detail:
-          "Gambar tidak memuat QR Code yang terbaca atau kualitas gambar kurang jelas.",
-      });
-    } finally {
-      if (fileInputRef.current) {
-        fileInputRef.current.value = "";
-      }
     }
   };
 
@@ -994,7 +849,7 @@ export default function ScannerPage() {
 
   return (
     <div className="min-h-screen bg-[#070510] text-white">
-      {/* CSS KHUSUS UNTUK MENAMPILKAN VIDEO KAMERA DENGAN JELAS */}
+      {/* CSS KHUSUS UNTUK MENAMPILKAN VIDEO KAMERA DENGAN OPSI ANTI-MIRROR */}
       <style>{`
         #qr-reader {
           width: 100% !important;
@@ -1002,11 +857,14 @@ export default function ScannerPage() {
           border: none !important;
           background: transparent !important;
         }
-        #qr-reader video {
+        #qr-reader video,
+        #qr-reader__scan_region video {
           width: 100% !important;
           height: 100% !important;
           object-fit: cover !important;
           border-radius: 0.85rem !important;
+          transform: ${isMirrored ? "scaleX(-1)" : "none"} !important;
+          -webkit-transform: ${isMirrored ? "scaleX(-1)" : "none"} !important;
         }
         #qr-reader__scan_region {
           background: transparent !important;
@@ -1073,7 +931,7 @@ export default function ScannerPage() {
                 KOLOM KIRI: CAMERA VIEWFINDER & KONTROL
             ================================================= */}
             <section className="flex flex-col rounded-2xl border border-white/[0.06] bg-[#0c0a1a]/90 p-5 sm:p-6 shadow-2xl backdrop-blur-xl">
-              <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 mb-4">
+              <div className="flex items-center justify-between gap-2 mb-4">
                 <div className="flex items-center gap-2">
                   <Camera size={19} className="text-purple-400" />
                   <h2 className="text-[17px] font-bold text-zinc-100">
@@ -1081,41 +939,16 @@ export default function ScannerPage() {
                   </h2>
                 </div>
 
-                {/* PILIHAN KAMERA JIKA PERANGKAT PUNYA LEBIH DARI 1 */}
-                <div className="flex items-center gap-2">
-                  {cameras.length > 0 ? (
-                    <select
-                      value={selectedCameraId}
-                      onChange={handleCameraSelectChange}
-                      className="h-9 rounded-xl border border-white/[0.1] bg-black/50 px-3 text-xs font-medium text-zinc-200 outline-none focus:border-purple-500 max-w-[210px] truncate"
-                      title="Pilih kamera perangkat"
-                    >
-                      {cameras.map((cam, idx) => (
-                        <option
-                          key={cam.id}
-                          value={cam.id}
-                          className="bg-[#0d0b1c] text-zinc-200"
-                        >
-                          {cam.label || `Kamera ${idx + 1}`}
-                        </option>
-                      ))}
-                    </select>
-                  ) : (
-                    <span className="text-[11px] text-zinc-500 italic">
-                      Kamera default
-                    </span>
-                  )}
-
-                  {/* Tombol Ganti Kamera Cepat */}
-                  <button
-                    onClick={handleSwitchCamera}
-                    className="flex h-9 items-center gap-1.5 rounded-xl border border-purple-500/30 bg-purple-950/40 px-3 text-xs font-bold text-purple-300 transition hover:bg-purple-900/60 active:scale-95 shrink-0"
-                    title="Ganti ke kamera berikutnya"
-                  >
-                    <SwitchCamera size={14} />
-                    <span>Ganti</span>
-                  </button>
-                </div>
+                {/* TOMBOL TOGGLE ORIENTASI MIRROR */}
+                <button
+                  type="button"
+                  onClick={() => setIsMirrored(!isMirrored)}
+                  className="flex items-center gap-1.5 rounded-xl border border-purple-500/30 bg-purple-950/40 px-3 py-1.5 text-xs font-semibold text-purple-300 hover:bg-purple-900/60 hover:text-white transition active:scale-95"
+                  title="Klik untuk membalik arah tampilan kamera (Flip Horizontal)"
+                >
+                  <FlipHorizontal size={14} />
+                  <span>{isMirrored ? "Mirror: Mati (Normal)" : "Mirror: Aktif"}</span>
+                </button>
               </div>
 
               {/* CONTAINER VIEWFINDER html5-qrcode */}
@@ -1197,10 +1030,11 @@ export default function ScannerPage() {
                 </div>
               )}
 
-              {/* 3 TOMBOL UTAMA: MULAI SCAN, BERHENTI SCAN, GANTI KAMERA */}
-              <div className="mt-5 grid grid-cols-1 sm:grid-cols-3 gap-2.5">
+              {/* HANYA 2 TOMBOL UTAMA: MULAI SCAN & BERHENTI SCAN */}
+              <div className="mt-5 grid grid-cols-1 sm:grid-cols-2 gap-3">
                 {/* 1. MULAI SCAN */}
                 <button
+                  type="button"
                   onClick={() => startScanner()}
                   disabled={scanning}
                   className={`flex h-12 items-center justify-center gap-2 rounded-xl text-sm font-bold shadow-lg transition active:scale-[0.98] ${
@@ -1215,6 +1049,7 @@ export default function ScannerPage() {
 
                 {/* 2. BERHENTI SCAN */}
                 <button
+                  type="button"
                   onClick={stopScanner}
                   disabled={!scanning}
                   className={`flex h-12 items-center justify-center gap-2 rounded-xl text-sm font-bold transition active:scale-[0.98] ${
@@ -1226,36 +1061,6 @@ export default function ScannerPage() {
                   <X size={18} />
                   Berhenti Scan
                 </button>
-
-                {/* 3. GANTI KAMERA */}
-                <button
-                  onClick={handleSwitchCamera}
-                  className="flex h-12 items-center justify-center gap-2 rounded-xl border border-white/[0.08] bg-white/[0.04] text-sm font-bold text-zinc-200 transition hover:bg-white/[0.08] hover:text-white active:scale-[0.98]"
-                  title="Ganti ke kamera depan / belakang atau webcam eksternal"
-                >
-                  <SwitchCamera size={18} />
-                  Ganti Kamera
-                </button>
-              </div>
-
-              {/* FITUR TAMBAHAN: UNGGAH FILE GAMBAR QR */}
-              <div className="mt-3 flex items-center justify-between border-t border-white/[0.06] pt-3 text-xs text-zinc-400">
-                <span className="flex items-center gap-1.5">
-                  <ImageIcon size={14} className="text-purple-400" />
-                  Punya file gambar QR tiket?
-                </span>
-
-                <label className="flex items-center gap-1.5 cursor-pointer rounded-lg border border-purple-500/30 bg-purple-950/30 px-3 py-1.5 text-xs font-semibold text-purple-300 transition hover:bg-purple-900/50 hover:text-white">
-                  <Upload size={13} />
-                  <span>Scan dari File Gambar</span>
-                  <input
-                    ref={fileInputRef}
-                    type="file"
-                    accept="image/*"
-                    onChange={handleFileUploadScan}
-                    className="hidden"
-                  />
-                </label>
               </div>
             </section>
 
@@ -1360,6 +1165,7 @@ export default function ScannerPage() {
                   />
 
                   <button
+                    type="button"
                     onClick={handleManualVerify}
                     className="flex h-11 shrink-0 items-center gap-2 rounded-xl bg-gradient-to-r from-purple-700 to-violet-800 px-5 text-sm font-bold text-white transition hover:from-purple-600 hover:to-violet-700 active:scale-95 shadow-md shadow-purple-950/40"
                   >
@@ -1379,6 +1185,7 @@ export default function ScannerPage() {
 
                   {matchedTicket && (
                     <button
+                      type="button"
                       onClick={() => resetTicketStatus(matchedTicket.id)}
                       className="text-[11px] text-purple-400 hover:text-purple-300 underline font-semibold"
                       title="Reset status tiket agar bisa dites ulang"
@@ -1397,7 +1204,7 @@ export default function ScannerPage() {
                       Belum Ada Tiket Terpindai
                     </p>
                     <p className="mt-1 max-w-[280px] text-xs text-zinc-500 leading-relaxed">
-                      Arahkan kamera ke QR Code tiket, unggah file gambar QR, atau ketikkan ID tiket pada kolom di atas.
+                      Arahkan kamera ke QR Code tiket, atau ketikkan ID tiket pada kolom di atas.
                     </p>
                   </div>
                 ) : (
@@ -1530,6 +1337,7 @@ export default function ScannerPage() {
 
                   <div className="flex items-center gap-2">
                     <button
+                      type="button"
                       onClick={resetAllTickets}
                       className="flex items-center gap-1 text-[11px] text-zinc-400 hover:text-purple-300 font-semibold px-2 py-0.5 rounded border border-white/[0.08] hover:border-purple-500/30 transition"
                       title="Reset semua tiket ke status Valid"
@@ -1538,7 +1346,7 @@ export default function ScannerPage() {
                       Reset Semua
                     </button>
                     <span className="text-[11px] text-zinc-500">
-                      Klik QR untuk scan
+                      Klik QR untuk uji
                     </span>
                   </div>
                 </div>
@@ -1550,6 +1358,7 @@ export default function ScannerPage() {
                       className="group flex items-center justify-between gap-2 rounded-xl border border-white/[0.06] bg-black/40 p-2.5 transition hover:border-purple-500/40 hover:bg-purple-950/20"
                     >
                       <button
+                        type="button"
                         onClick={() => {
                           setManualId(item.id);
                           processTicketVerification(item.id);
@@ -1567,9 +1376,10 @@ export default function ScannerPage() {
 
                       <div className="flex items-center gap-1.5 shrink-0">
                         <button
+                          type="button"
                           onClick={() => setQrModalTicket(item)}
                           className="flex h-7 items-center gap-1 rounded-lg border border-purple-500/40 bg-purple-950/60 px-2 text-[10px] font-bold text-purple-300 hover:bg-purple-900/80 hover:text-white transition active:scale-95"
-                          title="Tampilkan QR Code untuk diarahkan ke kamera laptop / HP"
+                          title="Tampilkan QR Code untuk diarahkan ke kamera"
                         >
                           <QrCode size={12} />
                           <span>QR</span>
@@ -1602,6 +1412,7 @@ export default function ScannerPage() {
           <div className="relative w-full max-w-sm rounded-3xl border border-purple-500/30 bg-[#0e0b1f] p-6 shadow-2xl shadow-purple-950/60 text-center">
             {/* Tombol Tutup */}
             <button
+              type="button"
               onClick={() => setQrModalTicket(null)}
               className="absolute right-4 top-4 flex h-8 w-8 items-center justify-center rounded-full bg-white/[0.06] text-zinc-400 hover:bg-white/[0.12] hover:text-white transition"
             >
@@ -1614,7 +1425,7 @@ export default function ScannerPage() {
 
             <h3 className="text-lg font-bold text-white">QR Code Tiket</h3>
             <p className="text-xs text-zinc-400 mt-0.5">
-              Arahkan webcam laptop atau kamera HP Anda ke QR Code ini
+              Arahkan kamera ke QR Code ini untuk memindai
             </p>
 
             {/* GAMBAR QR CODE TIKET */}
@@ -1659,6 +1470,7 @@ export default function ScannerPage() {
             {/* ACTION BUTTONS */}
             <div className="flex flex-col gap-2">
               <button
+                type="button"
                 onClick={() => {
                   processTicketVerification(qrModalTicket.id);
                   setQrModalTicket(null);
@@ -1670,6 +1482,7 @@ export default function ScannerPage() {
               </button>
 
               <button
+                type="button"
                 onClick={() => setQrModalTicket(null)}
                 className="flex h-9 items-center justify-center rounded-xl border border-white/[0.08] bg-white/[0.04] text-xs font-semibold text-zinc-300 hover:bg-white/[0.08] hover:text-white transition"
               >
