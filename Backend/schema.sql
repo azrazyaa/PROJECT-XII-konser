@@ -13,7 +13,7 @@ CREATE TABLE users (
     updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
 );
 
--- 2. Tabel Artists (Penyanyi / Artis Konser)
+-- 2. Tabel Artists (Penyanyii / Artis Konser)
 CREATE TABLE artists (
     id INT AUTO_INCREMENT PRIMARY KEY,
     name VARCHAR(100) NOT NULL,
