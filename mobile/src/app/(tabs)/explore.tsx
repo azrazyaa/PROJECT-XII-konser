@@ -236,7 +236,7 @@ export default function ExploreScreen() {
 
   return (
     <View style={styles.container}>
-      <StatusBar barStyle="dark-content" backgroundColor={C.bg} />
+      <StatusBar barStyle="dark-content" />
 
       <ScrollView
         showsVerticalScrollIndicator={false}
@@ -762,7 +762,7 @@ const styles = StyleSheet.create({
   },
 
   imageOverlay: {
-    ...StyleSheet.absoluteFillObject,
+    ...StyleSheet.absoluteFill,
     backgroundColor: "rgba(31, 7, 48, 0.36)",
   },
 
@@ -1054,7 +1054,7 @@ const styles = StyleSheet.create({
   },
 
   modalBackdrop: {
-    ...StyleSheet.absoluteFillObject,
+    ...StyleSheet.absoluteFill,
     backgroundColor: "rgba(25, 12, 35, 0.45)",
   },
 

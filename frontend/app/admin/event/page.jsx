@@ -51,9 +51,8 @@ function Sidebar({ open, setOpen }) {
       )}
 
       <aside
-        className={`fixed left-0 top-0 z-50 flex h-screen w-[292px] flex-col border-r border-purple-500/20 bg-[#0d0b1c] transition-transform duration-300 ${
-          open ? "translate-x-0" : "-translate-x-full"
-        } lg:translate-x-0`}
+        className={`fixed left-0 top-0 z-50 flex h-screen w-[292px] flex-col border-r border-purple-500/20 bg-[#0d0b1c] transition-transform duration-300 ${open ? "translate-x-0" : "-translate-x-full"
+          } lg:translate-x-0`}
       >
         <div className="flex h-[98px] items-center border-b border-white/[0.06] px-7">
           <div className="mr-3 flex h-11 w-11 items-center justify-center rounded-xl bg-gradient-to-br from-purple-700 to-purple-950 text-2xl text-white">
@@ -1019,11 +1018,10 @@ export default function EventPage() {
                 <button
                   key={item}
                   onClick={() => setFilter(item)}
-                  className={`rounded-lg px-4 py-2.5 text-sm font-medium transition ${
-                    filter === item
-                      ? "bg-purple-800/70 text-purple-200 shadow"
-                      : "text-zinc-500 hover:text-zinc-300"
-                  }`}
+                  className={`rounded-lg px-4 py-2.5 text-sm font-medium transition ${filter === item
+                    ? "bg-purple-800/70 text-purple-200 shadow"
+                    : "text-zinc-500 hover:text-zinc-300"
+                    }`}
                 >
                   {item}
                 </button>
@@ -1097,9 +1095,8 @@ export default function EventPage() {
                               />
                             ) : null}
                             <div
-                              className={`banner-fallback flex h-full w-full flex-col items-center justify-center gap-1 bg-gradient-to-br from-purple-950/60 to-[#0e091e] text-purple-400 ${
-                                event.banner_url ? "hidden" : "flex"
-                              }`}
+                              className={`banner-fallback flex h-full w-full flex-col items-center justify-center gap-1 bg-gradient-to-br from-purple-950/60 to-[#0e091e] text-purple-400 ${event.banner_url ? "hidden" : "flex"
+                                }`}
                             >
                               <Mic2 size={22} />
                               <span className="text-[10px] font-medium text-purple-300/60">No Banner</span>
@@ -1192,11 +1189,10 @@ export default function EventPage() {
                                     ? "Batalkan Status Completed (Kembalikan ke Active)"
                                     : "Tandai Konser Selesai (Completed)"
                                 }
-                                className={`flex h-9 w-9 items-center justify-center rounded-lg transition ${
-                                  isCompleted
-                                    ? "bg-zinc-800 text-zinc-400 hover:bg-zinc-700 hover:text-zinc-200"
-                                    : "bg-emerald-950/40 text-emerald-400 hover:bg-emerald-900/50"
-                                }`}
+                                className={`flex h-9 w-9 items-center justify-center rounded-lg transition ${isCompleted
+                                  ? "bg-zinc-800 text-zinc-400 hover:bg-zinc-700 hover:text-zinc-200"
+                                  : "bg-emerald-950/40 text-emerald-400 hover:bg-emerald-900/50"
+                                  }`}
                               >
                                 {isCompleted ? (
                                   <X size={16} />
@@ -1210,11 +1206,10 @@ export default function EventPage() {
                           <button
                             onClick={() => hapusEvent(event)}
                             title={event.is_closed === 2 ? "Hapus Permanen dari Database" : "Batalkan / Buang Event (Masuk ke Cancelled)"}
-                            className={`flex h-9 w-9 items-center justify-center rounded-lg transition ${
-                              event.is_closed === 2
-                                ? "bg-red-950/40 text-red-400 hover:bg-red-900/60"
-                                : "bg-red-950/20 text-zinc-500 hover:bg-red-950/50 hover:text-red-400"
-                            }`}
+                            className={`flex h-9 w-9 items-center justify-center rounded-lg transition ${event.is_closed === 2
+                              ? "bg-red-950/40 text-red-400 hover:bg-red-900/60"
+                              : "bg-red-950/20 text-zinc-500 hover:bg-red-950/50 hover:text-red-400"
+                              }`}
                           >
                             <Trash2 size={17} />
                           </button>
@@ -1432,11 +1427,10 @@ export default function EventPage() {
                       <div
                         key={tpl.id}
                         onClick={() => setForm({ ...form, stage_layout: tpl.id })}
-                        className={`group relative flex cursor-pointer flex-col justify-between rounded-2xl border p-3.5 transition-all duration-200 ${
-                          isSelected
-                            ? "border-purple-500 bg-purple-950/50 shadow-lg shadow-purple-950/60 ring-2 ring-purple-500/40"
-                            : "border-white/[0.07] bg-[#0c0a18] hover:border-purple-500/40 hover:bg-white/[0.02]"
-                        }`}
+                        className={`group relative flex cursor-pointer flex-col justify-between rounded-2xl border p-3.5 transition-all duration-200 ${isSelected
+                          ? "border-purple-500 bg-purple-950/50 shadow-lg shadow-purple-950/60 ring-2 ring-purple-500/40"
+                          : "border-white/[0.07] bg-[#0c0a18] hover:border-purple-500/40 hover:bg-white/[0.02]"
+                          }`}
                       >
                         {/* Header Badge & Radio/Check */}
                         <div className="flex items-center justify-between mb-2">
