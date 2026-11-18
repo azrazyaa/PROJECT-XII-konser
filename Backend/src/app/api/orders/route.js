@@ -2,6 +2,19 @@ import { NextResponse } from "next/server";
 import db from "@/lib/db";
 import jwt from "jsonwebtoken";
 
+const CORS_HEADERS = {
+  "Access-Control-Allow-Origin": "*",
+  "Access-Control-Allow-Methods": "GET, POST, OPTIONS",
+  "Access-Control-Allow-Headers": "Content-Type, Authorization",
+};
+
+export async function OPTIONS() {
+  return new NextResponse(null, {
+    status: 200,
+    headers: CORS_HEADERS,
+  });
+}
+
 // Helper: Verifikasi Token jika ada
 function getUserIdFromToken(request) {
   try {
@@ -109,24 +122,53 @@ export async function GET(request) {
             }
           : null;
 
+        const allTickets = itemsWithTickets.flatMap((it) =>
+          it.tickets.map((t) => ({
+            id: t.id,
+            ticket_code: t.ticket_code,
+            is_used: Boolean(t.is_used),
+            category_name: it.category_name,
+          }))
+        );
+
+        const flattenedDetails = itemsWithTickets.map((it) => ({
+          id: it.order_detail_id,
+          ticket_category_id: it.ticket_category_id,
+          qty: it.qty,
+          category_name: it.category_name,
+          price: Number(it.category_price) || 0,
+        }));
+
         return {
           ...order,
+          total_price: Number(order.total_amount),
           event: primaryEvent,
+          event_id: primaryEvent?.id,
+          event_title: primaryEvent?.title || "Concert",
+          event_venue: primaryEvent?.venue || "Venue",
+          event_date: primaryEvent?.event_date,
+          event_banner_url: primaryEvent?.banner_url || "",
+          artist_name: primaryEvent?.artist_name || "Artist",
           items: itemsWithTickets,
+          details: flattenedDetails,
+          tickets: allTickets,
         };
       })
     );
 
-    return NextResponse.json({
-      success: true,
-      message: "Berhasil mengambil data pesanan",
-      data: ordersWithDetails,
-    });
+    return NextResponse.json(
+      {
+        success: true,
+        message: "Berhasil mengambil data pesanan",
+        data: ordersWithDetails,
+      },
+      { status: 200, headers: CORS_HEADERS }
+    );
   } catch (error) {
     console.error("GET /api/orders error:", error);
     return NextResponse.json(
       { success: false, message: "Gagal mengambil pesanan", error: error.message },
-      { status: 500 }
+      { status: 500, headers: CORS_HEADERS }
     );
   }
 }
@@ -161,7 +203,7 @@ export async function POST(request) {
       } else {
         return NextResponse.json(
           { success: false, message: "Pengguna tidak teridentifikasi" },
-          { status: 400 }
+          { status: 400, headers: CORS_HEADERS }
         );
       }
     }
@@ -186,107 +228,123 @@ export async function POST(request) {
 
     if (orderItems.length === 0) {
       return NextResponse.json(
-        { success: false, message: "Data item pemesanan tidak valid" },
-        { status: 400 }
+        { success: false, message: "Pilih setidaknya satu tiket" },
+        { status: 400, headers: CORS_HEADERS }
       );
     }
 
-    // --- MULAI DATABASE TRANSACTION ---
     await connection.beginTransaction();
 
     let grandTotal = 0;
     const validatedItems = [];
 
-    // 1. Verifikasi harga dan potong kuota tiket secara atomic
-    for (const it of orderItems) {
-      const [updateResult] = await connection.query(
-        `UPDATE ticket_categories 
-         SET quota = quota - ? 
-         WHERE id = ? AND quota >= ?`,
-        [it.qty, it.ticket_category_id, it.qty]
-      );
-
-      if (updateResult.affectedRows === 0) {
-        await connection.rollback();
-        return NextResponse.json(
-          {
-            success: false,
-            message: `Maaf, kuota untuk kategori tiket ID ${it.ticket_category_id} tidak mencukupi!`,
-          },
-          { status: 400 }
-        );
-      }
-
+    // Validasi kuota dan kunci untuk setiap kategori tiket
+    for (const item of orderItems) {
       const [categories] = await connection.query(
-        "SELECT tc.id, tc.price, tc.name, tc.event_id, e.title as event_title FROM ticket_categories tc JOIN events e ON tc.event_id = e.id WHERE tc.id = ?",
-        [it.ticket_category_id]
+        `SELECT tc.id, tc.name, tc.price, tc.quota, tc.is_locked, e.title AS event_title,
+                COALESCE(SUM(od.qty), 0) AS sold
+         FROM ticket_categories tc
+         JOIN events e ON tc.event_id = e.id
+         LEFT JOIN order_details od ON tc.id = od.ticket_category_id
+         LEFT JOIN orders o ON od.order_id = o.id AND o.status IN ('paid', 'pending')
+         WHERE tc.id = ?
+         GROUP BY tc.id`,
+        [item.ticket_category_id]
       );
 
       if (categories.length === 0) {
         await connection.rollback();
         return NextResponse.json(
-          { success: false, message: "Kategori tiket tidak ditemukan" },
-          { status: 404 }
+          {
+            success: false,
+            message: `Kategori tiket ID ${item.ticket_category_id} tidak ditemukan`,
+          },
+          { status: 404, headers: CORS_HEADERS }
         );
       }
 
-      const price = Number(categories[0].price);
-      const subtotal = price * it.qty;
+      const cat = categories[0];
+
+      if (cat.is_locked) {
+        await connection.rollback();
+        return NextResponse.json(
+          {
+            success: false,
+            message: `Kategori tiket "${cat.name}" saat ini sedang dikunci`,
+          },
+          { status: 400, headers: CORS_HEADERS }
+        );
+      }
+
+      const remainingQuota = cat.quota - Number(cat.sold);
+      if (item.qty > remainingQuota) {
+        await connection.rollback();
+        return NextResponse.json(
+          {
+            success: false,
+            message: `Sisa tiket untuk "${cat.name}" hanya ${remainingQuota} tiket`,
+          },
+          { status: 400, headers: CORS_HEADERS }
+        );
+      }
+
+      const subtotal = Number(cat.price) * item.qty;
       grandTotal += subtotal;
 
       validatedItems.push({
-        ticket_category_id: it.ticket_category_id,
-        name: categories[0].name,
-        event_id: categories[0].event_id,
-        event_title: categories[0].event_title,
-        price,
-        qty: it.qty,
+        ...cat,
+        requested_qty: item.qty,
         subtotal,
       });
     }
 
-    // 2. Buat Order Code unik
-    const order_code = `NOC-${Date.now()}`;
-    const orderStatus = requestedStatus || "paid"; // Default paid saat transaksi selesai di Mobile
-    const expired_at = new Date(Date.now() + 24 * 60 * 60 * 1000); // 24 jam
+    // Biaya layanan jika diperlukan (dihitung otomatis atau 0)
+    const serviceFee =
+      grandTotal > 0 ? Math.ceil((grandTotal * 0.05) / 1000) * 1000 : 0;
+    grandTotal += serviceFee;
 
-    // 3. Insert ke tabel orders
+    // Buat kode order unik: NOC-YYYYMMDD-XXXX
+    const dateStr = new Date().toISOString().slice(0, 10).replace(/-/g, "");
+    const randomSuffix = Math.floor(1000 + Math.random() * 9000);
+    const order_code = `NOC-${dateStr}-${randomSuffix}`;
+
+    const orderStatus = requestedStatus || "paid";
+
+    const expiredAt = new Date();
+    expiredAt.setHours(expiredAt.getHours() + 2); // Berlaku 2 jam
+
     const [orderResult] = await connection.query(
       `INSERT INTO orders (user_id, order_code, total_amount, status, expired_at) 
        VALUES (?, ?, ?, ?, ?)`,
-      [user_id, order_code, grandTotal, orderStatus, expired_at]
+      [user_id, order_code, grandTotal, orderStatus, expiredAt]
     );
 
     const order_id = orderResult.insertId;
+
     const generatedTickets = [];
 
-    // 4. Insert ke tabel order_details dan buat tickets (QR Code) jika paid
+    // Masukkan order_details & buat tiket per item jika sudah lunas
     for (const item of validatedItems) {
       const [detailResult] = await connection.query(
         `INSERT INTO order_details (order_id, ticket_category_id, qty, subtotal) 
          VALUES (?, ?, ?, ?)`,
-        [order_id, item.ticket_category_id, item.qty, item.subtotal]
+        [order_id, item.id, item.requested_qty, item.subtotal]
       );
 
       const order_detail_id = detailResult.insertId;
 
-      // Jika status 'paid', otomatis buat record e-ticket unik di tabel tickets
       if (orderStatus === "paid") {
-        for (let i = 1; i <= item.qty; i++) {
-          const randSuffix = Math.random().toString(36).substring(2, 6).toUpperCase();
-          const ticket_code = `TCKT-${item.event_id}-${order_id}-${order_detail_id}-${i}-${randSuffix}`;
+        for (let i = 0; i < item.requested_qty; i++) {
+          const randHex = Math.random().toString(36).substring(2, 8).toUpperCase();
+          const ticket_code = `TKT-${order_code}-${item.id}-${i + 1}-${randHex}`;
 
-          const [ticketResult] = await connection.query(
-            `INSERT INTO tickets (order_detail_id, ticket_code, is_used) 
-             VALUES (?, ?, 0)`,
+          await connection.query(
+            `INSERT INTO tickets (order_detail_id, ticket_code) VALUES (?, ?)`,
             [order_detail_id, ticket_code]
           );
 
           generatedTickets.push({
-            id: ticketResult.insertId,
-            order_detail_id,
             ticket_code,
-            is_used: 0,
             event_title: item.event_title,
             category_name: item.name,
           });
@@ -311,14 +369,14 @@ export async function POST(request) {
           tickets: generatedTickets,
         },
       },
-      { status: 201 }
+      { status: 201, headers: CORS_HEADERS }
     );
   } catch (error) {
     await connection.rollback();
     console.error("POST /api/orders error:", error);
     return NextResponse.json(
       { success: false, message: "Gagal membuat pesanan", error: error.message },
-      { status: 500 }
+      { status: 500, headers: CORS_HEADERS }
     );
   } finally {
     connection.release();

@@ -53,6 +53,7 @@ type EventDetail = {
   artist_id?: number;
   total_quota: number;
   is_closed: boolean;
+  min_price?: number;
 };
 
 const FALLBACK =
@@ -192,7 +193,7 @@ export default function EventDetailScreen() {
 
   const minPrice = tickets.length
     ? Math.min(...tickets.map((t) => t.price))
-    : 0;
+    : event.min_price || 0;
 
   const galleryImages = [event.banner_url || FALLBACK];
 

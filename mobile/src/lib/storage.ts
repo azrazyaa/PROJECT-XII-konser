@@ -1,5 +1,8 @@
 /**
- * storage.ts — Persistent storage for Nocturne Mobile
+ * storage.ts — Persistent & Safe storage for Nocturne Mobile
+ *
+ * Implements defensive storage with in-memory fallback to avoid crashes
+ * if AsyncStorage native module is unavailable in Expo Go or unlinked.
  */
 
 import AsyncStorage from "@react-native-async-storage/async-storage";
@@ -10,12 +13,55 @@ const KEYS = {
   WISHLIST: "nocturne_wishlist",
 } as const;
 
-export const saveToken = (token: string) =>
-  AsyncStorage.setItem(KEYS.TOKEN, token);
+// In-memory cache fallback to ensure the app never crashes
+const memoryCache = new Map<string, string>();
+let isAsyncStorageFunctional = true;
 
-export const getToken = () => AsyncStorage.getItem(KEYS.TOKEN);
+async function safeGetItem(key: string): Promise<string | null> {
+  if (isAsyncStorageFunctional) {
+    try {
+      const val = await AsyncStorage.getItem(key);
+      if (val !== null && val !== undefined) {
+        memoryCache.set(key, val);
+        return val;
+      }
+    } catch (err) {
+      console.warn(`[Storage] AsyncStorage.getItem failed for "${key}", using memory fallback:`, err);
+      isAsyncStorageFunctional = false;
+    }
+  }
+  return memoryCache.get(key) ?? null;
+}
 
-export const removeToken = () => AsyncStorage.removeItem(KEYS.TOKEN);
+async function safeSetItem(key: string, value: string): Promise<void> {
+  memoryCache.set(key, value);
+  if (isAsyncStorageFunctional) {
+    try {
+      await AsyncStorage.setItem(key, value);
+    } catch (err) {
+      console.warn(`[Storage] AsyncStorage.setItem failed for "${key}", using memory fallback:`, err);
+      isAsyncStorageFunctional = false;
+    }
+  }
+}
+
+async function safeRemoveItem(key: string): Promise<void> {
+  memoryCache.delete(key);
+  if (isAsyncStorageFunctional) {
+    try {
+      await AsyncStorage.removeItem(key);
+    } catch (err) {
+      console.warn(`[Storage] AsyncStorage.removeItem failed for "${key}", using memory fallback:`, err);
+      isAsyncStorageFunctional = false;
+    }
+  }
+}
+
+export const saveToken = (token: string) => safeSetItem(KEYS.TOKEN, token);
+
+export const getToken = () => safeGetItem(KEYS.TOKEN);
+
+export const removeToken = () => safeRemoveItem(KEYS.TOKEN);
 
 export type StoredUser = {
   id: number;
@@ -27,10 +73,10 @@ export type StoredUser = {
 };
 
 export const saveUser = (user: StoredUser) =>
-  AsyncStorage.setItem(KEYS.USER, JSON.stringify(user));
+  safeSetItem(KEYS.USER, JSON.stringify(user));
 
 export const getUser = async (): Promise<StoredUser | null> => {
-  const raw = await AsyncStorage.getItem(KEYS.USER);
+  const raw = await safeGetItem(KEYS.USER);
   if (!raw) return null;
   try {
     return JSON.parse(raw) as StoredUser;
@@ -39,7 +85,7 @@ export const getUser = async (): Promise<StoredUser | null> => {
   }
 };
 
-export const removeUser = () => AsyncStorage.removeItem(KEYS.USER);
+export const removeUser = () => safeRemoveItem(KEYS.USER);
 
 export type WishlistItem = {
   id: string;
@@ -54,10 +100,10 @@ export type WishlistItem = {
 };
 
 export const saveWishlist = (items: WishlistItem[]) =>
-  AsyncStorage.setItem(KEYS.WISHLIST, JSON.stringify(items));
+  safeSetItem(KEYS.WISHLIST, JSON.stringify(items));
 
 export const getWishlist = async (): Promise<WishlistItem[]> => {
-  const raw = await AsyncStorage.getItem(KEYS.WISHLIST);
+  const raw = await safeGetItem(KEYS.WISHLIST);
   if (!raw) return [];
   try {
     return JSON.parse(raw) as WishlistItem[];

@@ -1,6 +1,19 @@
 import { NextResponse } from "next/server";
 import db from "@/lib/db";
 
+const CORS_HEADERS = {
+  "Access-Control-Allow-Origin": "*",
+  "Access-Control-Allow-Methods": "GET, OPTIONS",
+  "Access-Control-Allow-Headers": "Content-Type, Authorization",
+};
+
+export async function OPTIONS() {
+  return new NextResponse(null, {
+    status: 200,
+    headers: CORS_HEADERS,
+  });
+}
+
 // GET: Ambil semua artis beserta jumlah konser aktifnya
 export async function GET() {
   try {
@@ -10,6 +23,7 @@ export async function GET() {
         a.name,
         COALESCE(a.genre, 'Music') AS genre,
         COALESCE(a.photo_url, '') AS photo_url,
+        COALESCE(a.photo_url, '') AS image_url,
         a.created_at,
         COUNT(e.id) AS concert_count
       FROM artists a
@@ -20,11 +34,14 @@ export async function GET() {
 
     const [rows] = await db.query(query);
 
-    return NextResponse.json({
-      success: true,
-      message: "Berhasil mengambil daftar artis",
-      data: rows,
-    });
+    return NextResponse.json(
+      {
+        success: true,
+        message: "Berhasil mengambil daftar artis",
+        data: rows,
+      },
+      { status: 200, headers: CORS_HEADERS }
+    );
   } catch (error) {
     console.error("GET /api/artists error:", error);
     return NextResponse.json(
@@ -33,7 +50,7 @@ export async function GET() {
         message: "Gagal mengambil daftar artis",
         error: error.message,
       },
-      { status: 500 }
+      { status: 500, headers: CORS_HEADERS }
     );
   }
 }

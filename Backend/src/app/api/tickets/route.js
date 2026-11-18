@@ -2,6 +2,19 @@ import { NextResponse } from "next/server";
 import db from "@/lib/db";
 import { syncEventTicketCategories } from "@/lib/stageTemplates";
 
+const CORS_HEADERS = {
+  "Access-Control-Allow-Origin": "*",
+  "Access-Control-Allow-Methods": "GET, POST, OPTIONS",
+  "Access-Control-Allow-Headers": "Content-Type, Authorization",
+};
+
+export async function OPTIONS() {
+  return new NextResponse(null, {
+    status: 200,
+    headers: CORS_HEADERS,
+  });
+}
+
 // 1. GET: Ambil daftar kategori tiket berdasarkan event_id atau semua tiket
 //    Jika ada event_id, otomatis pastikan kategori selaras dengan layout panggung event tersebut.
 export async function GET(request) {
@@ -50,22 +63,28 @@ export async function GET(request) {
     // Format boolean / number
     const formatted = rows.map((r) => ({
       ...r,
+      id: Number(r.id),
+      event_id: Number(r.event_id),
       price: Number(r.price),
       quota: Number(r.quota),
       sold: Number(r.sold),
       locked: Boolean(r.is_locked),
+      is_locked: Boolean(r.is_locked),
     }));
 
-    return NextResponse.json({
-      success: true,
-      message: "Berhasil mengambil data kategori tiket",
-      data: formatted,
-    });
+    return NextResponse.json(
+      {
+        success: true,
+        message: "Berhasil mengambil data kategori tiket",
+        data: formatted,
+      },
+      { status: 200, headers: CORS_HEADERS }
+    );
   } catch (error) {
     console.error("GET /api/tickets error:", error);
     return NextResponse.json(
       { success: false, message: "Gagal mengambil data tiket", error: error.message },
-      { status: 500 }
+      { status: 500, headers: CORS_HEADERS }
     );
   }
 }
@@ -86,7 +105,7 @@ export async function POST(request) {
           success: false,
           message: "Event ID, nama kategori, harga, dan kuota wajib diisi",
         },
-        { status: 400 }
+        { status: 400, headers: CORS_HEADERS }
       );
     }
 
@@ -110,9 +129,10 @@ export async function POST(request) {
           quota: cleanQuota,
           sold: 0,
           locked: Boolean(lockedVal),
+          is_locked: Boolean(lockedVal),
         },
       },
-      { status: 201 }
+      { status: 201, headers: CORS_HEADERS }
     );
   } catch (error) {
     console.error("POST /api/tickets error:", error);
@@ -122,7 +142,7 @@ export async function POST(request) {
         message: "Gagal menambahkan kategori tiket",
         error: error.message,
       },
-      { status: 500 }
+      { status: 500, headers: CORS_HEADERS }
     );
   }
 }

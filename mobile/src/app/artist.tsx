@@ -104,7 +104,10 @@ export default function ArtistScreen() {
   const name = artist?.name || "Artist";
   const genre = artist?.genre || "Music";
   const avatar = artist?.image_url || FALLBACK_AVATAR;
-  const concerts = artist?.concerts || [];
+  const concerts =
+    artist?.concerts ||
+    (artist as unknown as { events?: ArtistConcert[] })?.events ||
+    [];
 
   return (
     <View style={styles.container}>

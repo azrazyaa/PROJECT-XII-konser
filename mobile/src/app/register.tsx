@@ -3,6 +3,7 @@ import { useRouter } from "expo-router";
 import { StatusBar } from "expo-status-bar";
 import { useState } from "react";
 import {
+  ActivityIndicator,
   Alert,
   KeyboardAvoidingView,
   Platform,
@@ -35,17 +36,21 @@ export default function RegisterScreen() {
   const [loading, setLoading] = useState(false);
 
   const handleRegister = async () => {
-    if (!name.trim() || !email.trim() || !password.trim()) {
+    const trimmedName = name.trim();
+    const trimmedEmail = email.trim().toLowerCase();
+    const trimmedPassword = password.trim();
+
+    if (!trimmedName || !trimmedEmail || !trimmedPassword) {
       Alert.alert("Lengkapi Data", "Nama, email, dan password wajib diisi.");
       return;
     }
 
-    if (password.length < 6) {
+    if (trimmedPassword.length < 6) {
       Alert.alert("Password Lemah", "Password minimal 6 karakter.");
       return;
     }
 
-    const emailValid = /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
+    const emailValid = /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(trimmedEmail);
     if (!emailValid) {
       Alert.alert("Email Tidak Valid", "Masukkan format email yang benar.");
       return;
@@ -53,11 +58,16 @@ export default function RegisterScreen() {
 
     setLoading(true);
     try {
-      await register(name.trim(), email.trim(), password);
+      await register(trimmedName, trimmedEmail, trimmedPassword);
       Alert.alert(
         "Registrasi Berhasil!",
-        "Akun kamu sudah dibuat. Silakan login.",
-        [{ text: "Login", onPress: () => router.replace("/login") }]
+        "Akun Anda telah berhasil dibuat. Silakan login untuk melanjutkan.",
+        [
+          {
+            text: "Login Sekarang",
+            onPress: () => router.replace("/login"),
+          },
+        ]
       );
     } catch (err: unknown) {
       const msg = err instanceof Error ? err.message : "Registrasi gagal";
@@ -100,6 +110,7 @@ export default function RegisterScreen() {
             placeholder="Your full name"
             placeholderTextColor={C.muted}
             autoCapitalize="words"
+            editable={!loading}
           />
 
           <Text style={styles.label}>Email</Text>
@@ -112,6 +123,7 @@ export default function RegisterScreen() {
             keyboardType="email-address"
             autoCapitalize="none"
             autoCorrect={false}
+            editable={!loading}
           />
 
           <Text style={styles.label}>Password</Text>
@@ -122,6 +134,7 @@ export default function RegisterScreen() {
             placeholder="Min. 6 characters"
             placeholderTextColor={C.muted}
             secureTextEntry
+            editable={!loading}
           />
 
           <Pressable
@@ -129,9 +142,11 @@ export default function RegisterScreen() {
             onPress={handleRegister}
             disabled={loading}
           >
-            <Text style={styles.buttonText}>
-              {loading ? "Creating account…" : "Create Account"}
-            </Text>
+            {loading ? (
+              <ActivityIndicator color={C.white} size="small" />
+            ) : (
+              <Text style={styles.buttonText}>Create Account</Text>
+            )}
           </Pressable>
         </View>
 

@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import db from "@/lib/db";
 import bcrypt from "bcryptjs";
+import jwt from "jsonwebtoken";
 
 const CORS_HEADERS = {
   "Access-Control-Allow-Origin": "*",
@@ -55,7 +56,7 @@ export async function POST(request) {
     // Cek apakah email sudah terdaftar
     const [existingUser] = await db.query(
       "SELECT id FROM users WHERE email = ? LIMIT 1",
-      [email]
+      [email.trim().toLowerCase()]
     );
 
     if (existingUser && existingUser.length > 0) {
@@ -77,15 +78,28 @@ export async function POST(request) {
       [name.trim(), email.trim().toLowerCase(), hashedPassword, "customer"]
     );
 
+    const newUserId = result.insertId;
+
+    // Buat token JWT
+    const token = jwt.sign(
+      { id: newUserId, name: name.trim(), role: "customer" },
+      process.env.JWT_SECRET || "konserdb123",
+      { expiresIn: "1d" }
+    );
+
     return NextResponse.json(
       {
         success: true,
         message: "Registrasi berhasil! Silakan login.",
-        userId: result.insertId,
+        userId: newUserId,
         data: {
-          id: result.insertId,
-          name: name.trim(),
-          email: email.trim().toLowerCase(),
+          token,
+          user: {
+            id: newUserId,
+            name: name.trim(),
+            email: email.trim().toLowerCase(),
+            role: "customer",
+          },
         },
       },
       {

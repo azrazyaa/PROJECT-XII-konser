@@ -2,6 +2,19 @@ import { NextResponse } from "next/server";
 import db from "@/lib/db";
 import { syncEventTicketCategories } from "@/lib/stageTemplates";
 
+const CORS_HEADERS = {
+  "Access-Control-Allow-Origin": "*",
+  "Access-Control-Allow-Methods": "GET, POST, OPTIONS",
+  "Access-Control-Allow-Headers": "Content-Type, Authorization",
+};
+
+export async function OPTIONS() {
+  return new NextResponse(null, {
+    status: 200,
+    headers: CORS_HEADERS,
+  });
+}
+
 // 1. GET: Ambil Semua Daftar Konser
 export async function GET() {
   try {
@@ -16,8 +29,20 @@ export async function GET() {
         e.stage_layout,
         e.total_quota,
         e.is_closed,
+        e.artist_id,
         COALESCE(a.name, 'Unknown Artist') AS artist_name,
-        COALESCE(a.genre, 'Music') AS artist_genre
+        COALESCE(a.genre, 'Music') AS artist_genre,
+        COALESCE(a.photo_url, '') AS artist_photo_url,
+        (
+          SELECT MIN(tc.price)
+          FROM ticket_categories tc
+          WHERE tc.event_id = e.id AND tc.is_locked = 0
+        ) AS min_price,
+        (
+          SELECT COALESCE(SUM(tc.quota), 0)
+          FROM ticket_categories tc
+          WHERE tc.event_id = e.id
+        ) AS total_ticket_quota
       FROM events e
       LEFT JOIN artists a ON e.artist_id = a.id
       ORDER BY e.created_at DESC
@@ -25,15 +50,29 @@ export async function GET() {
 
     const [events] = await db.query(query);
 
-    return NextResponse.json({
-      success: true,
-      message: "Berhasil mengambil daftar konser",
-      data: events,
-    });
+    const formattedEvents = events.map((ev) => ({
+      ...ev,
+      id: Number(ev.id),
+      artist_id: ev.artist_id ? Number(ev.artist_id) : undefined,
+      min_price: ev.min_price !== null ? Number(ev.min_price) : 0,
+      total_quota:
+        Number(ev.total_quota) || Number(ev.total_ticket_quota) || 0,
+      is_closed: Boolean(ev.is_closed),
+    }));
+
+    return NextResponse.json(
+      {
+        success: true,
+        message: "Berhasil mengambil daftar konser",
+        data: formattedEvents,
+      },
+      { status: 200, headers: CORS_HEADERS }
+    );
   } catch (error) {
+    console.error("GET /api/events error:", error);
     return NextResponse.json(
       { success: false, message: "Gagal mengambil data", error: error.message },
-      { status: 500 }
+      { status: 500, headers: CORS_HEADERS }
     );
   }
 }
@@ -82,7 +121,7 @@ export async function POST(request) {
           success: false,
           message: "Artist, Judul, Lokasi, dan Tanggal Konser wajib diisi",
         },
-        { status: 400 }
+        { status: 400, headers: CORS_HEADERS }
       );
     }
 
@@ -111,10 +150,11 @@ export async function POST(request) {
     return NextResponse.json(
       {
         success: true,
-        message: "Berhasil menambah konser baru. Kategori tiket otomatis dibuat sesuai template layout panggung.",
+        message:
+          "Berhasil menambah konser baru. Kategori tiket otomatis dibuat sesuai template layout panggung.",
         data: { id: newEventId, title, venue, stage_layout: finalLayout },
       },
-      { status: 201 }
+      { status: 201, headers: CORS_HEADERS }
     );
   } catch (error) {
     console.error("POST /api/events error:", error);
@@ -124,7 +164,7 @@ export async function POST(request) {
         message: "Gagal menambah konser",
         error: error.message,
       },
-      { status: 500 }
+      { status: 500, headers: CORS_HEADERS }
     );
   }
 }

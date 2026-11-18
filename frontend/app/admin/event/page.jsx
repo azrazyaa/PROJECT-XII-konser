@@ -471,6 +471,7 @@ export default function EventPage() {
     title: "",
     venue: "",
     event_date: "",
+    event_time: "19:00",
     artist_name: "",
     description: "",
     banner_url: "",
@@ -689,7 +690,7 @@ export default function EventPage() {
             title: event.title,
             description: event.description || "",
             venue: event.venue,
-            event_date: event.event_date ? event.event_date.split("T")[0] : "",
+            event_date: event.event_date || "",
             banner_url: event.banner_url || "",
             stage_layout: event.stage_layout || "Main Stage",
             total_quota: event.total_quota || 0,
@@ -742,7 +743,7 @@ export default function EventPage() {
           title: event.title,
           description: event.description || "",
           venue: event.venue,
-          event_date: event.event_date ? event.event_date.split("T")[0] : "",
+          event_date: event.event_date || "",
           banner_url: event.banner_url || "",
           stage_layout: event.stage_layout || "Main Stage",
           total_quota: event.total_quota || 0,
@@ -777,10 +778,15 @@ export default function EventPage() {
 
     setSubmitting(true);
 
+    const timeVal = form.event_time && form.event_time.trim() ? form.event_time.trim() : "19:00";
+    const combinedEventDate = form.event_date.includes("T")
+      ? form.event_date
+      : `${form.event_date}T${timeVal}:00`;
+
     const payload = {
       title: form.title,
       venue: form.venue,
-      event_date: form.event_date,
+      event_date: combinedEventDate,
       artist_name: form.artist_name.trim(),
       description: form.description || "",
       banner_url: form.banner_url || "",
@@ -805,6 +811,7 @@ export default function EventPage() {
         title: "",
         venue: "",
         event_date: "",
+        event_time: "19:00",
         artist_name: "",
         description: "",
         banner_url: "",
@@ -832,12 +839,29 @@ export default function EventPage() {
     return `${year}-${month}-${day}`;
   };
 
+  // Helper konversi jam database ke format input input[type="time"] (HH:mm)
+  const toInputTime = (dateStr) => {
+    if (!dateStr) return "19:00";
+    const date = new Date(dateStr);
+    if (isNaN(date.getTime())) {
+      const parts = String(dateStr).split("T");
+      if (parts[1]) {
+        return parts[1].slice(0, 5);
+      }
+      return "19:00";
+    }
+    const hours = String(date.getHours()).padStart(2, "0");
+    const minutes = String(date.getMinutes()).padStart(2, "0");
+    return `${hours}:${minutes}`;
+  };
+
   const openAddModal = () => {
     setEditingEvent(null);
     setForm({
       title: "",
       venue: "",
       event_date: "",
+      event_time: "19:00",
       artist_name: "",
       description: "",
       banner_url: "",
@@ -854,6 +878,7 @@ export default function EventPage() {
       title: event.title || "",
       venue: event.venue || "",
       event_date: toInputDate(event.event_date),
+      event_time: toInputTime(event.event_date),
       artist_name: event.artist_name || "",
       description: event.description || "",
       banner_url: event.banner_url || "",
@@ -943,16 +968,19 @@ export default function EventPage() {
     return result;
   }, [events, search, filter]);
 
-  // Format tanggal untuk tampilan UI
+  // Format tanggal & jam untuk tampilan UI
   const formatDate = (dateStr) => {
     if (!dateStr) return "-";
     const date = new Date(dateStr);
     if (isNaN(date.getTime())) return dateStr;
-    return date.toLocaleDateString("id-ID", {
+    const dateFormatted = date.toLocaleDateString("id-ID", {
       day: "numeric",
       month: "short",
       year: "numeric",
     });
+    const hours = String(date.getHours()).padStart(2, "0");
+    const minutes = String(date.getMinutes()).padStart(2, "0");
+    return `${dateFormatted} • ${hours}:${minutes} WIB`;
   };
 
   // ============================================================
@@ -1287,19 +1315,36 @@ export default function EventPage() {
                   />
                 </div>
 
-                <div>
-                  <label className="mb-2 block text-sm font-semibold text-zinc-300">
-                    Event Date <span className="text-red-400">*</span>
-                  </label>
-                  <input
-                    type="date"
-                    value={form.event_date}
-                    onChange={(e) =>
-                      setForm({ ...form, event_date: e.target.value })
-                    }
-                    className="h-11 w-full rounded-xl border border-white/[0.06] bg-black/30 px-4 text-sm text-zinc-200 outline-none focus:border-purple-500/50"
-                    required
-                  />
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                  <div>
+                    <label className="mb-2 block text-sm font-semibold text-zinc-300">
+                      Tanggal Konser <span className="text-red-400">*</span>
+                    </label>
+                    <input
+                      type="date"
+                      value={form.event_date}
+                      onChange={(e) =>
+                        setForm({ ...form, event_date: e.target.value })
+                      }
+                      className="h-11 w-full rounded-xl border border-white/[0.06] bg-black/30 px-4 text-sm text-zinc-200 outline-none focus:border-purple-500/50"
+                      required
+                    />
+                  </div>
+
+                  <div>
+                    <label className="mb-2 block text-sm font-semibold text-zinc-300">
+                      Jam Konser (WIB) <span className="text-red-400">*</span>
+                    </label>
+                    <input
+                      type="time"
+                      value={form.event_time}
+                      onChange={(e) =>
+                        setForm({ ...form, event_time: e.target.value })
+                      }
+                      className="h-11 w-full rounded-xl border border-white/[0.06] bg-black/30 px-4 text-sm text-zinc-200 outline-none focus:border-purple-500/50"
+                      required
+                    />
+                  </div>
                 </div>
 
                 <div>

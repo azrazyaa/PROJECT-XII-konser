@@ -553,23 +553,44 @@ export default function ScannerPage() {
 
       // 1. Coba verifikasi ke API Backend database terlebih dahulu
       try {
-        const res = await fetch("/api/scan", {
+        let res = await fetch("/api/scan", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({ ticket_code: ticketId }),
         });
-        const data = await res.json();
 
-        if (data.success && data.ticket) {
-          const t = data.ticket;
+        // Fallback langsung ke port backend jika rewrite /api/scan gagal
+        if (!res.ok && res.status === 404) {
+          try {
+            const fallbackRes = await fetch("http://localhost:3000/api/scan", {
+              method: "POST",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify({ ticket_code: ticketId }),
+            });
+            if (fallbackRes.ok || fallbackRes.status === 400 || fallbackRes.status === 404) {
+              res = fallbackRes;
+            }
+          } catch (e) {
+            // Abaikan fallback error
+          }
+        }
+
+        const data = await res.json();
+        const t = data.ticket || data.data;
+
+        if (data.success && t) {
+          const scannedTimeStr = t.scanned_at
+            ? new Date(t.scanned_at).toLocaleTimeString("id-ID") + " WIB"
+            : new Date().toLocaleTimeString("id-ID") + " WIB";
+
           const mappedTicket = {
-            id: t.ticket_code,
+            id: t.ticket_code || ticketId,
             customer: t.customer_name || "Pemegang Tiket",
             event: t.event_title || "Konser Nocturne",
-            ticketClass: t.category_name || "VIP / Festival",
+            ticketClass: t.category_name || "Tiket Masuk",
             seat: "General Access",
             status: "used",
-            scannedAt: t.scanned_at || new Date().toLocaleTimeString("id-ID") + " WIB",
+            scannedAt: scannedTimeStr,
           };
 
           setMatchedTicket(mappedTicket);
@@ -579,22 +600,31 @@ export default function ScannerPage() {
             detail: `Tiket valid atas nama ${mappedTicket.customer} (${mappedTicket.event} - ${mappedTicket.ticketClass}). Pengunjung diizinkan masuk venue.`,
           });
           return;
-        } else if (data.status === "already_used") {
-          const t = data.ticket || {};
+        } else if (data.already_used || data.status === "already_used") {
           const mappedTicket = {
-            id: t.ticket_code || ticketId,
-            customer: t.customer_name || "Pengunjung",
-            event: t.event_title || "Konser",
-            ticketClass: t.category_name || "Ticket",
+            id: t?.ticket_code || ticketId,
+            customer: t?.customer_name || "Pengunjung",
+            event: t?.event_title || "Konser",
+            ticketClass: t?.category_name || "Tiket",
             seat: "-",
             status: "used",
-            scannedAt: t.scanned_at || "Sesi sebelumnya",
+            scannedAt: t?.scanned_at
+              ? new Date(t.scanned_at).toLocaleTimeString("id-ID") + " WIB"
+              : "Sesi sebelumnya",
           };
           setMatchedTicket(mappedTicket);
           setScanStatus({
             type: "used",
             message: "Tiket sudah digunakan",
             detail: `Tiket ini telah dipindai sebelumnya pada ${mappedTicket.scannedAt}. Pengunjung tidak dapat masuk kembali.`,
+          });
+          return;
+        } else if (data.not_found) {
+          setMatchedTicket(null);
+          setScanStatus({
+            type: "invalid",
+            message: "QR Code tidak valid",
+            detail: `ID Tiket "${ticketId}" tidak terdaftar dalam database konser.`,
           });
           return;
         }
@@ -1211,7 +1241,7 @@ export default function ScannerPage() {
                         handleManualVerify();
                       }
                     }}
-                    placeholder="Contoh: NOCT-2026-TS-001"
+                    placeholder="Masukkan atau scan Kode Tiket (TKT-...)"
                     className="h-11 min-w-0 flex-1 rounded-xl border border-white/[0.08] bg-black/40 px-4 text-sm text-zinc-100 placeholder:text-zinc-600 outline-none focus:border-purple-500 font-mono uppercase"
                   />
 
@@ -1377,172 +1407,10 @@ export default function ScannerPage() {
                   </div>
                 )}
               </section>
-
-              {/* CONTOH KODE TIKET UNTUK PENGUJIAN */}
-              <section className="rounded-2xl border border-white/[0.06] bg-[#0c0a1a]/70 p-4 sm:p-5 text-xs">
-                <div className="flex flex-wrap items-center justify-between gap-2 mb-3">
-                  <span className="font-bold text-purple-300 flex items-center gap-1.5">
-                    <QrCode size={15} />
-                    Contoh Kode Tiket untuk Pengujian:
-                  </span>
-
-                  <div className="flex items-center gap-2">
-                    <button
-                      type="button"
-                      onClick={resetAllTickets}
-                      className="flex items-center gap-1 text-[11px] text-zinc-400 hover:text-purple-300 font-semibold px-2 py-0.5 rounded border border-white/[0.08] hover:border-purple-500/30 transition"
-                      title="Reset semua tiket ke status Valid"
-                    >
-                      <RotateCw size={11} />
-                      Reset Semua
-                    </button>
-                    <span className="text-[11px] text-zinc-500">
-                      Klik QR untuk uji
-                    </span>
-                  </div>
-                </div>
-
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
-                  {Object.values(ticketsData).map((item) => (
-                    <div
-                      key={item.id}
-                      className="group flex items-center justify-between gap-2 rounded-xl border border-white/[0.06] bg-black/40 p-2.5 transition hover:border-purple-500/40 hover:bg-purple-950/20"
-                    >
-                      <button
-                        type="button"
-                        onClick={() => {
-                          setManualId(item.id);
-                          processTicketVerification(item.id);
-                        }}
-                        className="min-w-0 flex-1 text-left"
-                        title="Klik untuk verifikasi cepat"
-                      >
-                        <p className="font-mono text-[11px] font-bold text-zinc-200 group-hover:text-purple-300 transition truncate">
-                          {item.id}
-                        </p>
-                        <p className="text-[10px] text-zinc-400 truncate">
-                          {item.customer} • {item.ticketClass}
-                        </p>
-                      </button>
-
-                      <div className="flex items-center gap-1.5 shrink-0">
-                        <button
-                          type="button"
-                          onClick={() => setQrModalTicket(item)}
-                          className="flex h-7 items-center gap-1 rounded-lg border border-purple-500/40 bg-purple-950/60 px-2 text-[10px] font-bold text-purple-300 hover:bg-purple-900/80 hover:text-white transition active:scale-95"
-                          title="Tampilkan QR Code untuk diarahkan ke kamera"
-                        >
-                          <QrCode size={12} />
-                          <span>QR</span>
-                        </button>
-
-                        <span
-                          className={`rounded px-1.5 py-0.5 text-[9px] font-bold uppercase ${
-                            item.status === "valid"
-                              ? "bg-emerald-500/20 text-emerald-300"
-                              : "bg-amber-500/20 text-amber-300"
-                          }`}
-                        >
-                          {item.status}
-                        </span>
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              </section>
             </div>
           </div>
         </div>
       </main>
-
-      {/* =========================================================
-          MODAL PREVIEW QR CODE TIKET (UNTUK TEST SCAN LANGSUNG)
-      ========================================================= */}
-      {qrModalTicket && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-md animate-in fade-in duration-200">
-          <div className="relative w-full max-w-sm rounded-3xl border border-purple-500/30 bg-[#0e0b1f] p-6 shadow-2xl shadow-purple-950/60 text-center">
-            {/* Tombol Tutup */}
-            <button
-              type="button"
-              onClick={() => setQrModalTicket(null)}
-              className="absolute right-4 top-4 flex h-8 w-8 items-center justify-center rounded-full bg-white/[0.06] text-zinc-400 hover:bg-white/[0.12] hover:text-white transition"
-            >
-              <X size={18} />
-            </button>
-
-            <div className="mx-auto mb-3 flex h-12 w-12 items-center justify-center rounded-2xl bg-gradient-to-br from-purple-700 to-purple-950 text-white shadow-md shadow-purple-950/40">
-              <QrCode size={24} />
-            </div>
-
-            <h3 className="text-lg font-bold text-white">QR Code Tiket</h3>
-            <p className="text-xs text-zinc-400 mt-0.5">
-              Arahkan kamera ke QR Code ini untuk memindai
-            </p>
-
-            {/* GAMBAR QR CODE TIKET */}
-            <div className="my-5 flex items-center justify-center rounded-2xl border-2 border-dashed border-purple-500/40 bg-white p-4 shadow-xl">
-              <img
-                src={`https://api.qrserver.com/v1/create-qr-code/?size=240x240&margin=4&data=${encodeURIComponent(
-                  qrModalTicket.id
-                )}`}
-                alt={`QR Code ${qrModalTicket.id}`}
-                className="h-52 w-52 object-contain"
-              />
-            </div>
-
-            {/* INFO TIKET */}
-            <div className="mb-4 rounded-xl border border-white/[0.08] bg-black/40 p-3 text-left text-xs space-y-1">
-              <div className="flex justify-between">
-                <span className="text-zinc-500">ID Tiket:</span>
-                <span className="font-mono font-bold text-purple-300">
-                  {qrModalTicket.id}
-                </span>
-              </div>
-              <div className="flex justify-between">
-                <span className="text-zinc-500">Nama:</span>
-                <span className="font-semibold text-zinc-200">
-                  {qrModalTicket.customer}
-                </span>
-              </div>
-              <div className="flex justify-between">
-                <span className="text-zinc-500">Event:</span>
-                <span className="text-zinc-300 max-w-[170px] truncate">
-                  {qrModalTicket.event}
-                </span>
-              </div>
-              <div className="flex justify-between">
-                <span className="text-zinc-500">Kategori:</span>
-                <span className="text-purple-400 font-semibold">
-                  {qrModalTicket.ticketClass}
-                </span>
-              </div>
-            </div>
-
-            {/* ACTION BUTTONS */}
-            <div className="flex flex-col gap-2">
-              <button
-                type="button"
-                onClick={() => {
-                  processTicketVerification(qrModalTicket.id);
-                  setQrModalTicket(null);
-                }}
-                className="flex h-10 items-center justify-center gap-2 rounded-xl bg-gradient-to-r from-purple-600 to-violet-700 text-xs font-bold text-white shadow-lg shadow-purple-950/40 hover:from-purple-500 hover:to-violet-600 transition active:scale-95"
-              >
-                <CheckCircle2 size={15} />
-                Simulasikan Pindai Tiket Ini
-              </button>
-
-              <button
-                type="button"
-                onClick={() => setQrModalTicket(null)}
-                className="flex h-9 items-center justify-center rounded-xl border border-white/[0.08] bg-white/[0.04] text-xs font-semibold text-zinc-300 hover:bg-white/[0.08] hover:text-white transition"
-              >
-                Tutup
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
     </div>
   );
 }

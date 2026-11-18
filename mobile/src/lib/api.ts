@@ -2,22 +2,42 @@
  * api.ts — Centralized API client for Nocturne Mobile
  *
  * Automatically detects host IP from Expo Go (hostUri),
- * falls back to 10.0.2.2 for Android emulator and localhost for Web/iOS.
+ * falls back to local LAN IP for physical mobile devices,
+ * and localhost for Web/emulators.
  */
 
 import Constants from "expo-constants";
 import { Platform } from "react-native";
 
-function getBaseUrl(): string {
-  // When running on physical device via Expo Go, hostUri contains `<laptop-ip>:<expo-port>`
-  const hostUri = Constants.expoConfig?.hostUri;
-  if (hostUri) {
+// Default LAN IP of development machine for physical devices
+const DEV_MACHINE_IP = "192.168.1.6";
+
+export function getBaseUrl(): string {
+  // 1. Environment variable if provided
+  if (process.env.EXPO_PUBLIC_API_URL) {
+    return process.env.EXPO_PUBLIC_API_URL;
+  }
+
+  // 2. Try to extract IP from Expo hostUri or experienceUrl
+  const rawConstants = Constants as unknown as Record<string, Record<string, unknown> | string | undefined>;
+  const hostUri =
+    Constants.expoConfig?.hostUri ||
+    (typeof rawConstants.manifest === "object" ? (rawConstants.manifest?.debuggerHost as string | undefined) : undefined) ||
+    (typeof rawConstants.manifest2 === "object" ? ((rawConstants.manifest2?.extra as Record<string, unknown> | undefined)?.expoClient as Record<string, unknown> | undefined)?.hostUri as string | undefined : undefined);
+
+  if (typeof hostUri === "string" && hostUri.length > 0) {
     const ip = hostUri.split(":")[0];
-    return `http://${ip}:3000`;
+    if (ip && ip !== "localhost" && ip !== "127.0.0.1") {
+      return `http://${ip}:3000`;
+    }
   }
-  if (Platform.OS === "android") {
-    return "http://10.0.2.2:3000";
+
+  // 3. Fallback for physical devices (iOS / Android)
+  if (Platform.OS === "android" || Platform.OS === "ios") {
+    return `http://${DEV_MACHINE_IP}:3000`;
   }
+
+  // 4. Web fallback
   return "http://localhost:3000";
 }
 
@@ -35,7 +55,7 @@ export async function apiFetch<T = unknown>(
   options: RequestInit = {},
   token?: string | null
 ): Promise<ApiResponse<T>> {
-  const url = `${API_BASE_URL}${endpoint}`;
+  const url = `${getBaseUrl()}${endpoint}`;
 
   const headers: Record<string, string> = {
     "Content-Type": "application/json",
@@ -46,7 +66,15 @@ export async function apiFetch<T = unknown>(
     headers["Authorization"] = `Bearer ${token}`;
   }
 
-  const response = await fetch(url, { ...options, headers });
+  let response: Response;
+  try {
+    response = await fetch(url, { ...options, headers });
+  } catch (err: unknown) {
+    console.error(`[API Network Error] URL: ${url}`, err);
+    throw new Error(
+      `Gagal terhubung ke server (${getBaseUrl()}). Pastikan Backend menyala dan HP satu Wi-Fi dengan laptop.`
+    );
+  }
 
   let json: ApiResponse<T>;
   try {
