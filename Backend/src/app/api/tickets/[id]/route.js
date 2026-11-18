@@ -15,10 +15,17 @@ export async function GET(request, { params }) {
         tc.quota,
         tc.is_locked,
         tc.created_at,
-        COALESCE(SUM(od.qty), 0) AS sold
+        COALESCE(SUM(
+          CASE
+            WHEN o.status = 'paid'
+              OR (o.status = 'pending' AND o.expired_at > NOW())
+            THEN od.qty
+            ELSE 0
+          END
+        ), 0) AS sold
       FROM ticket_categories tc
       LEFT JOIN order_details od ON tc.id = od.ticket_category_id
-      LEFT JOIN orders o ON od.order_id = o.id AND o.status IN ('paid', 'pending')
+      LEFT JOIN orders o ON od.order_id = o.id
       WHERE tc.id = ?
       GROUP BY tc.id
     `;
@@ -150,4 +157,3 @@ export async function DELETE(request, { params }) {
     );
   }
 }
-

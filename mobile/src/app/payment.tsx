@@ -2,6 +2,7 @@ import { useAuth } from "@/context/AuthContext";
 import { apiGet, apiPost } from "@/lib/api";
 import { useLocalSearchParams, useRouter } from "expo-router";
 import { StatusBar } from "expo-status-bar";
+import * as WebBrowser from "expo-web-browser";
 import { useEffect, useState } from "react";
 import {
   ActivityIndicator,
@@ -102,10 +103,6 @@ export default function PaymentScreen() {
   const [email, setEmail] = useState(user?.email || "aditya@example.com");
   const [phone, setPhone] = useState("+62 812 3456 7890");
 
-  const [paymentMethod, setPaymentMethod] = useState("Virtual Account");
-  const [selectedBank, setSelectedBank] = useState("BCA");
-  const banks = ["BCA", "BNI", "Mandiri"];
-
   useEffect(() => {
     (async () => {
       try {
@@ -136,46 +133,57 @@ export default function PaymentScreen() {
       return;
     }
 
+    if (!token) {
+      Alert.alert("Login required", "Please sign in again before paying.");
+      return;
+    }
+
     setProcessing(true);
     try {
-      const fullPaymentMethod =
-        paymentMethod === "Virtual Account"
-          ? `Virtual Account (${selectedBank})`
-          : paymentMethod;
-
       const orderPayload = {
-        user_id: user?.id,
         items: items.map((it) => ({
           ticket_category_id: it.ticket_category_id,
           qty: it.qty,
         })),
-        status: "paid",
-        payment_method: fullPaymentMethod,
       };
 
       const res = await apiPost<{
         order_id: number;
         order_code: string;
-        tickets?: Array<{ ticket_code: string; category_name: string }>;
       }>("/api/orders", orderPayload, token);
 
       if (!res.success || !res.data) {
         throw new Error(res.message || "Gagal membuat pesanan");
       }
 
+      const checkout = await apiPost<{
+        order_code: string;
+        total_amount: number;
+        redirect_url: string;
+      }>(
+        "/api/payments/midtrans/checkout",
+        {
+          order_code: res.data.order_code,
+          customer_details: {
+            first_name: fullName.trim(),
+            email: email.trim(),
+            phone: phone.trim(),
+          },
+        },
+        token
+      );
+      if (!checkout.success || !checkout.data?.redirect_url) {
+        throw new Error(checkout.message || "Gagal membuka pembayaran Midtrans");
+      }
+
+      await WebBrowser.openBrowserAsync(checkout.data.redirect_url);
       router.push({
         pathname: "/order-success",
         params: {
-          id: eventId,
-          order_code: res.data.order_code,
+          order_code: checkout.data.order_code,
           name: fullName,
           email,
           phone,
-          paymentMethod,
-          bank: paymentMethod === "Virtual Account" ? selectedBank : "",
-          total: String(total),
-          items: JSON.stringify(items),
-          tickets: JSON.stringify(res.data.tickets || []),
         },
       });
     } catch (err: unknown) {
@@ -234,7 +242,7 @@ export default function PaymentScreen() {
         <View style={styles.deadlineCard}>
           <Text style={styles.clockIcon}>◷</Text>
           <Text style={styles.deadlineText}>
-            Complete payment before 23:59 WIB
+            Complete payment within 2 hours
           </Text>
         </View>
 
@@ -326,105 +334,12 @@ export default function PaymentScreen() {
           </Text>
         </View>
 
-        {/* PAYMENT METHODS */}
-        <Text style={styles.sectionTitle}>Payment method</Text>
-
-        <Pressable
-          onPress={() => setPaymentMethod("Virtual Account")}
-          style={[
-            styles.methodCard,
-            paymentMethod === "Virtual Account" && styles.methodSelected,
-          ]}
-        >
-          <View style={styles.methodTop}>
-            <View
-              style={[
-                styles.radio,
-                paymentMethod === "Virtual Account" && styles.radioActive,
-              ]}
-            >
-              {paymentMethod === "Virtual Account" && (
-                <View style={styles.radioDot} />
-              )}
-            </View>
-            <Text style={styles.methodIcon}>♧</Text>
-            <Text style={styles.methodName}>Virtual Account</Text>
-            <Text style={styles.bankHint}>{selectedBank}</Text>
-          </View>
-
-          {paymentMethod === "Virtual Account" && (
-            <View style={styles.bankList}>
-              {banks.map((bank) => (
-                <Pressable
-                  key={bank}
-                  onPress={() => setSelectedBank(bank)}
-                  style={[
-                    styles.bankButton,
-                    selectedBank === bank && styles.bankSelected,
-                  ]}
-                >
-                  <Text
-                    style={[
-                      styles.bankText,
-                      selectedBank === bank && styles.bankTextSelected,
-                    ]}
-                  >
-                    {bank}
-                  </Text>
-                </Pressable>
-              ))}
-            </View>
-          )}
-        </Pressable>
-
-        <Pressable
-          onPress={() => setPaymentMethod("E-Wallet")}
-          style={[
-            styles.methodCard,
-            paymentMethod === "E-Wallet" && styles.methodSelected,
-          ]}
-        >
-          <View style={styles.methodTop}>
-            <View
-              style={[
-                styles.radio,
-                paymentMethod === "E-Wallet" && styles.radioActive,
-              ]}
-            >
-              {paymentMethod === "E-Wallet" && <View style={styles.radioDot} />}
-            </View>
-            <Text style={styles.methodIcon}>▣</Text>
-            <Text style={styles.methodName}>E-Wallet</Text>
-          </View>
-        </Pressable>
-
-        <Pressable
-          onPress={() => setPaymentMethod("Credit or Debit Card")}
-          style={[
-            styles.methodCard,
-            paymentMethod === "Credit or Debit Card" && styles.methodSelected,
-          ]}
-        >
-          <View style={styles.methodTop}>
-            <View
-              style={[
-                styles.radio,
-                paymentMethod === "Credit or Debit Card" && styles.radioActive,
-              ]}
-            >
-              {paymentMethod === "Credit or Debit Card" && (
-                <View style={styles.radioDot} />
-              )}
-            </View>
-            <Text style={styles.methodIcon}>▤</Text>
-            <Text style={styles.methodName}>Credit or Debit Card</Text>
-          </View>
-        </Pressable>
-
         <View style={styles.demoNotice}>
           <Text style={styles.demoIcon}>♢</Text>
           <Text style={styles.demoText}>
-            Connected to Nocturne Live Database. Ticket will be created directly.
+            Complete your payment securely with Midtrans. Available payment
+            methods will appear on the next screen. Tickets are issued after
+            payment is confirmed.
           </Text>
         </View>
       </ScrollView>

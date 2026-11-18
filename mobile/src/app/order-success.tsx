@@ -1,8 +1,10 @@
+import { useAuth } from "@/context/AuthContext";
 import { apiGet } from "@/lib/api";
 import { useLocalSearchParams, useRouter } from "expo-router";
 import { StatusBar } from "expo-status-bar";
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import {
+  ActivityIndicator,
   Image,
   Pressable,
   ScrollView,
@@ -35,6 +37,15 @@ type ItemParam = {
 type GeneratedTicket = {
   ticket_code: string;
   category_name?: string;
+};
+
+type OrderStatus = {
+  status: "pending" | "paid" | "cancelled" | "expired";
+  midtrans_status_checked?: boolean;
+  total_amount: number;
+  event: EventSummary | null;
+  items: ItemParam[];
+  tickets: GeneratedTicket[];
 };
 
 type EventSummary = {
@@ -72,54 +83,96 @@ const FALLBACK =
 
 export default function OrderSuccessScreen() {
   const router = useRouter();
+  const { token } = useAuth();
 
   const params = useLocalSearchParams<{
-    id?: string;
     order_code?: string;
     name?: string;
     email?: string;
     phone?: string;
-    paymentMethod?: string;
-    bank?: string;
-    total?: string;
-    items?: string;
-    tickets?: string;
   }>();
 
-  const eventId = getString(params.id, "1");
-  const orderCode = getString(params.order_code, "NOC-2026-001");
+  const orderCode = getString(params.order_code);
   const buyerName = getString(params.name, "Aditya Pratama");
   const email = getString(params.email, "aditya.pratama@example.com");
   const phone = getString(params.phone, "+62 812 3456 7890");
-  const method = getString(params.paymentMethod, "Virtual Account");
-  const bank = getString(params.bank, "BCA");
-  const total = Number(getString(params.total, "840000")) || 0;
 
   const [event, setEvent] = useState<EventSummary | null>(null);
+  const [order, setOrder] = useState<OrderStatus | null>(null);
+  const [loadingOrder, setLoadingOrder] = useState(true);
+  const [statusError, setStatusError] = useState("");
+
+  const refreshOrder = useCallback(async (showLoading = true) => {
+    if (!token || !orderCode) {
+      setLoadingOrder(false);
+      return;
+    }
+    if (showLoading) setLoadingOrder(true);
+    try {
+      const res = await apiGet<OrderStatus>(
+        `/api/orders/${encodeURIComponent(orderCode)}`,
+        token
+      );
+      if (!res.success || !res.data) {
+        throw new Error(res.message || "Unable to retrieve payment status.");
+      }
+      setOrder(res.data);
+      setEvent(res.data.event);
+      setStatusError("");
+    } catch (err) {
+      console.error("Order status error:", err);
+      setStatusError(
+        err instanceof Error
+          ? err.message
+          : "Unable to verify payment status. Please try again."
+      );
+    } finally {
+      if (showLoading) setLoadingOrder(false);
+    }
+  }, [orderCode, token]);
 
   useEffect(() => {
-    (async () => {
-      try {
-        const res = await apiGet<EventSummary>(`/api/events/${eventId}`);
-        if (res.success && res.data) setEvent(res.data);
-      } catch (err) {
-        console.error("Error fetching event:", err);
-      }
-    })();
-  }, [eventId]);
+    refreshOrder();
+  }, [refreshOrder]);
 
-  let items: ItemParam[] = [];
-  try {
-    if (params.items) items = JSON.parse(getString(params.items));
-  } catch {}
+  useEffect(() => {
+    if (
+      !orderCode ||
+      order?.status === "paid" ||
+      order?.status === "cancelled" ||
+      order?.status === "expired"
+    ) {
+      return;
+    }
 
-  let tickets: GeneratedTicket[] = [];
-  try {
-    if (params.tickets) tickets = JSON.parse(getString(params.tickets));
-  } catch {}
+    let active = true;
+    let timeout: ReturnType<typeof setTimeout>;
+    const poll = async () => {
+      await refreshOrder(false);
+      if (active) timeout = setTimeout(poll, 10000);
+    };
+    timeout = setTimeout(poll, 10000);
+    return () => {
+      active = false;
+      clearTimeout(timeout);
+    };
+  }, [order?.status, orderCode, refreshOrder]);
+
+  const items = order?.items || [];
+  const tickets = order?.tickets || [];
+  const total = order?.total_amount || 0;
+  const isPaid = order?.status === "paid";
+  const statusLabel =
+    order?.status === "paid"
+      ? "PAID"
+      : order?.status === "cancelled"
+        ? "CANCELLED"
+        : order?.status === "expired"
+          ? "EXPIRED"
+          : "PENDING";
 
   const totalTickets = items.reduce((s, it) => s + (it.qty || 0), 0);
-  const primaryTicketCode = tickets[0]?.ticket_code || orderCode;
+  const primaryTicketCode = tickets[0]?.ticket_code || "";
 
   return (
     <View style={styles.container}>
@@ -133,13 +186,25 @@ export default function OrderSuccessScreen() {
         <View style={styles.successSection}>
           <View style={styles.outerCircle}>
             <View style={styles.innerCircle}>
-              <Text style={styles.checkIcon}>✓</Text>
+              <Text style={styles.checkIcon}>
+                {isPaid ? "✓" : order?.status === "pending" || !order ? "…" : "!"}
+              </Text>
             </View>
           </View>
 
-          <Text style={styles.successTitle}>Payment Successful!</Text>
+          <Text style={styles.successTitle}>
+            {isPaid
+              ? "Payment Successful!"
+              : order?.status === "cancelled" || order?.status === "expired"
+                ? "Payment not completed"
+                : "Waiting for payment"}
+          </Text>
           <Text style={styles.successSubtitle}>
-            Your payment has been received. Your concert tickets are ready!
+            {isPaid
+              ? "Your payment has been received. Your concert tickets are ready!"
+              : order?.status === "cancelled" || order?.status === "expired"
+                ? "This order is no longer active. Please create a new order to try again."
+                : "Complete payment in the Midtrans page. This screen updates after Midtrans confirms your payment."}
           </Text>
         </View>
 
@@ -148,12 +213,50 @@ export default function OrderSuccessScreen() {
           <Text style={styles.orderLabel}>ORDER NUMBER</Text>
           <View style={styles.orderRow}>
             <Text style={styles.orderNumber}>{orderCode}</Text>
-            <View style={styles.paidBadge}>
-              <Text style={styles.paidText}>PAID</Text>
+            <View style={isPaid ? styles.paidBadge : styles.pendingBadge}>
+              <Text style={isPaid ? styles.paidText : styles.pendingText}>
+                {statusLabel}
+              </Text>
             </View>
           </View>
         </View>
 
+        {loadingOrder && !order ? (
+          <ActivityIndicator size="large" color={C.purple} />
+        ) : !isPaid ? (
+          <View style={styles.detailCard}>
+            <Text style={styles.sectionTitle}>Payment status</Text>
+            <Text style={styles.paymentValue}>
+              {order
+                ? `Order is ${order.status}. Your tickets will appear here after Midtrans confirms payment.`
+                : "Unable to load payment status. Check your connection and try again."}
+            </Text>
+            {statusError ? (
+              <Text style={styles.statusError}>{statusError}</Text>
+            ) : null}
+            {order?.status === "pending" && !statusError ? (
+              <Text style={styles.statusHint}>
+                Checking the latest status with Midtrans automatically.
+              </Text>
+            ) : null}
+            <Pressable
+              style={styles.refreshButton}
+              onPress={() => refreshOrder()}
+              disabled={loadingOrder}
+            >
+              <Text style={styles.primaryButtonText}>
+                {loadingOrder ? "Checking..." : "Check payment status"}
+              </Text>
+            </Pressable>
+            <Pressable
+              style={styles.secondaryButton}
+              onPress={() => router.replace("/(tabs)/my-tickets")}
+            >
+              <Text style={styles.secondaryButtonText}>View My Tickets</Text>
+            </Pressable>
+          </View>
+        ) : (
+          <>
         {/* E-TICKET */}
         <Text style={styles.sectionTitle}>Your E-Ticket</Text>
 
@@ -240,12 +343,6 @@ export default function OrderSuccessScreen() {
         <Text style={styles.sectionTitle}>Payment Information</Text>
         <View style={styles.detailCard}>
           <View style={styles.paymentRow}>
-            <Text style={styles.detailLabel}>Payment method</Text>
-            <Text style={styles.paymentValue}>
-              {method} {bank ? `(${bank})` : ""}
-            </Text>
-          </View>
-          <View style={styles.paymentRow}>
             <Text style={styles.detailLabel}>Buyer</Text>
             <Text style={styles.paymentValue}>{buyerName}</Text>
           </View>
@@ -277,8 +374,12 @@ export default function OrderSuccessScreen() {
         >
           <Text style={styles.secondaryButtonText}>Back to Home</Text>
         </Pressable>
+          </>
+        )}
 
-        <Text style={styles.footerText}>Thank you for choosing Nocturne ♡</Text>
+        {isPaid && (
+          <Text style={styles.footerText}>Thank you for choosing Nocturne ♡</Text>
+        )}
       </ScrollView>
     </View>
   );
@@ -350,7 +451,14 @@ const styles = StyleSheet.create({
     paddingHorizontal: 12,
     paddingVertical: 5,
   },
+  pendingBadge: {
+    backgroundColor: "#FFF1C7",
+    borderRadius: 20,
+    paddingHorizontal: 12,
+    paddingVertical: 5,
+  },
   paidText: { color: C.green, fontSize: 10, fontWeight: "800" },
+  pendingText: { color: "#B65B00", fontSize: 10, fontWeight: "800" },
   sectionTitle: {
     color: C.text,
     fontSize: 19,
@@ -494,6 +602,18 @@ const styles = StyleSheet.create({
     flexShrink: 1,
     textAlign: "right",
   },
+  statusError: {
+    color: "#B42318",
+    fontSize: 12,
+    lineHeight: 18,
+    marginTop: 10,
+  },
+  statusHint: {
+    color: C.muted,
+    fontSize: 12,
+    lineHeight: 18,
+    marginTop: 10,
+  },
   statusValue: { color: C.green, fontSize: 12, fontWeight: "800" },
   primaryButton: {
     height: 54,
@@ -502,6 +622,13 @@ const styles = StyleSheet.create({
     alignItems: "center",
     justifyContent: "center",
     marginBottom: 12,
+  },
+  refreshButton: {
+    backgroundColor: C.purple,
+    borderRadius: 14,
+    alignItems: "center",
+    paddingVertical: 15,
+    marginTop: 16,
   },
   primaryButtonText: { color: C.white, fontSize: 14, fontWeight: "800" },
   secondaryButton: {

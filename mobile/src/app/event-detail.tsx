@@ -95,31 +95,60 @@ export default function EventDetailScreen() {
   const [event, setEvent] = useState<EventDetail | null>(null);
   const [tickets, setTickets] = useState<TicketCategory[]>([]);
   const [loading, setLoading] = useState(true);
+  const [loadError, setLoadError] = useState("");
   const [inWishlist, setInWishlist] = useState(false);
   const [expanded, setExpanded] = useState(false);
 
   const loadEvent = useCallback(async () => {
-    if (!eventId) return;
-    try {
-      const [evRes, tcRes] = await Promise.all([
+    if (!eventId) {
+      setLoadError("Event ID is missing.");
+      setLoading(false);
+      return;
+    }
+
+    setLoading(true);
+    setLoadError("");
+    const [eventResult, ticketsResult, wishlistResult] =
+      await Promise.allSettled([
         apiGet<EventDetail>(`/api/events/${eventId}`),
         apiGet<TicketCategory[]>(`/api/tickets?event_id=${eventId}`),
+        getWishlist(),
       ]);
 
+    if (eventResult.status === "fulfilled") {
+      const evRes = eventResult.value;
       if (evRes.success && evRes.data) {
         setEvent(evRes.data);
+      } else {
+        setEvent(null);
+        setLoadError(evRes.message || "Event not found.");
       }
+    } else {
+      console.error("EventDetail event error:", eventResult.reason);
+      setEvent(null);
+      setLoadError(
+        eventResult.reason instanceof Error
+          ? eventResult.reason.message
+          : "Unable to load event."
+      );
+    }
+
+    if (ticketsResult.status === "fulfilled") {
+      const tcRes = ticketsResult.value;
       if (tcRes.success && Array.isArray(tcRes.data)) {
         setTickets(tcRes.data);
       }
-
-      const wl = await getWishlist();
-      setInWishlist(wl.some((w) => w.id === eventId));
-    } catch (err) {
-      console.error("EventDetail error:", err);
-    } finally {
-      setLoading(false);
+    } else {
+      console.error("EventDetail tickets error:", ticketsResult.reason);
     }
+
+    if (wishlistResult.status === "fulfilled") {
+      setInWishlist(wishlistResult.value.some((w) => w.id === eventId));
+    } else {
+      console.error("EventDetail wishlist error:", wishlistResult.reason);
+    }
+
+    setLoading(false);
   }, [eventId]);
 
   useEffect(() => {
@@ -183,7 +212,12 @@ export default function EventDetailScreen() {
   if (!event) {
     return (
       <View style={[styles.container, { justifyContent: "center", alignItems: "center" }]}>
-        <Text style={{ color: C.muted }}>Event not found.</Text>
+        <Text style={{ color: C.muted, textAlign: "center", paddingHorizontal: 24 }}>
+          {loadError || "Event not found."}
+        </Text>
+        <Pressable onPress={loadEvent} style={{ marginTop: 16 }}>
+          <Text style={{ color: C.accent, fontWeight: "700" }}>Try again</Text>
+        </Pressable>
         <Pressable onPress={() => router.back()} style={{ marginTop: 16 }}>
           <Text style={{ color: C.accent, fontWeight: "700" }}>← Go back</Text>
         </Pressable>

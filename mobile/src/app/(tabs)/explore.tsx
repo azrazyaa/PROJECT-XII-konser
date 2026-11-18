@@ -69,15 +69,22 @@ export default function ExploreScreen() {
   const [sort, setSort] = useState<SortOption>("Upcoming");
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
+  const [loadError, setLoadError] = useState("");
 
   const loadEvents = useCallback(async () => {
     try {
       const res = await apiGet<EventItem[]>("/api/events");
       if (res.success && Array.isArray(res.data)) {
         setEvents(res.data);
+        setLoadError("");
+      } else {
+        throw new Error(res.message || "Server returned an invalid event list.");
       }
     } catch (err) {
       console.error("ExploreScreen error:", err);
+      setLoadError(
+        err instanceof Error ? err.message : "Unable to load events."
+      );
     } finally {
       setLoading(false);
       setRefreshing(false);
@@ -155,6 +162,14 @@ export default function ExploreScreen() {
       {loading ? (
         <View style={styles.loadingBox}>
           <ActivityIndicator size="large" color={C.purple} />
+        </View>
+      ) : loadError ? (
+        <View style={styles.emptyBox}>
+          <Text style={styles.emptyText}>Events could not be loaded.</Text>
+          <Text style={styles.emptyHint}>{loadError}</Text>
+          <Pressable style={styles.retryButton} onPress={loadEvents}>
+            <Text style={styles.retryButtonText}>Try again</Text>
+          </Pressable>
         </View>
       ) : (
         <ScrollView
@@ -331,4 +346,14 @@ const styles = StyleSheet.create({
   emptyText: { fontSize: 16, fontWeight: "700", color: C.text },
 
   emptyHint: { fontSize: 13, color: C.muted, marginTop: 4 },
+
+  retryButton: {
+    marginTop: 16,
+    borderRadius: 12,
+    backgroundColor: C.purple,
+    paddingHorizontal: 20,
+    paddingVertical: 11,
+  },
+
+  retryButtonText: { color: C.white, fontSize: 14, fontWeight: "700" },
 });

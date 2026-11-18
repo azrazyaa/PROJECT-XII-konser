@@ -86,29 +86,54 @@ export default function HomeScreen() {
   const [wishlistIds, setWishlistIds] = useState<Set<string>>(new Set());
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
+  const [eventsError, setEventsError] = useState("");
 
   const loadData = useCallback(async () => {
-    try {
-      const [eventsRes, artistsRes] = await Promise.all([
+    const [eventsResult, artistsResult, wishlistResult] =
+      await Promise.allSettled([
         apiGet<EventItem[]>("/api/events"),
         apiGet<ArtistItem[]>("/api/artists"),
+        getWishlist(),
       ]);
 
+    if (eventsResult.status === "fulfilled") {
+      const eventsRes = eventsResult.value;
       if (eventsRes.success && Array.isArray(eventsRes.data)) {
         setEvents(eventsRes.data);
+        setEventsError("");
+      } else {
+        setEventsError(
+          eventsRes.message || "Server returned an invalid event list."
+        );
       }
+    } else {
+      console.error("HomeScreen events error:", eventsResult.reason);
+      setEventsError(
+        eventsResult.reason instanceof Error
+          ? eventsResult.reason.message
+          : "Unable to load events."
+      );
+    }
+
+    if (artistsResult.status === "fulfilled") {
+      const artistsRes = artistsResult.value;
       if (artistsRes.success && Array.isArray(artistsRes.data)) {
         setArtists(artistsRes.data);
       }
-
-      const wl = await getWishlist();
-      setWishlistIds(new Set(wl.map((w) => String(w.id))));
-    } catch (err) {
-      console.error("HomeScreen loadData error:", err);
-    } finally {
-      setLoading(false);
-      setRefreshing(false);
+    } else {
+      console.error("HomeScreen artists error:", artistsResult.reason);
     }
+
+    if (wishlistResult.status === "fulfilled") {
+      setWishlistIds(
+        new Set(wishlistResult.value.map((w) => String(w.id)))
+      );
+    } else {
+      console.error("HomeScreen wishlist error:", wishlistResult.reason);
+    }
+
+    setLoading(false);
+    setRefreshing(false);
   }, []);
 
   useEffect(() => {
@@ -393,9 +418,13 @@ export default function HomeScreen() {
             ))}
           </ScrollView>
 
-          {upcomingEvents.length === 0 && (
+          {eventsError ? (
+            <Text style={styles.emptyText}>
+              Could not load events: {eventsError}
+            </Text>
+          ) : upcomingEvents.length === 0 ? (
             <Text style={styles.emptyText}>No concerts found.</Text>
-          )}
+          ) : null}
         </View>
 
         {/* POPULAR ARTISTS */}

@@ -9,13 +9,14 @@
 import Constants from "expo-constants";
 import { Platform } from "react-native";
 
-// Default LAN IP of development machine for physical devices
-const DEV_MACHINE_IP = "192.168.1.6";
+// Current LAN IP of the development machine; override with EXPO_PUBLIC_API_URL when it changes.
+const DEV_MACHINE_IP = "172.28.138.192";
 
 export function getBaseUrl(): string {
   // 1. Environment variable if provided
-  if (process.env.EXPO_PUBLIC_API_URL) {
-    return process.env.EXPO_PUBLIC_API_URL;
+  const configuredUrl = process.env.EXPO_PUBLIC_API_URL?.trim();
+  if (configuredUrl) {
+    return configuredUrl.replace(/\/+$/, "");
   }
 
   // 2. Try to extract IP from Expo hostUri or experienceUrl
@@ -26,9 +27,15 @@ export function getBaseUrl(): string {
     (typeof rawConstants.manifest2 === "object" ? ((rawConstants.manifest2?.extra as Record<string, unknown> | undefined)?.expoClient as Record<string, unknown> | undefined)?.hostUri as string | undefined : undefined);
 
   if (typeof hostUri === "string" && hostUri.length > 0) {
-    const ip = hostUri.split(":")[0];
-    if (ip && ip !== "localhost" && ip !== "127.0.0.1") {
-      return `http://${ip}:3000`;
+    try {
+      const host = new URL(
+        hostUri.includes("://") ? hostUri : `http://${hostUri}`
+      ).hostname;
+      if (host && host !== "localhost" && host !== "127.0.0.1") {
+        return `http://${host}:3000`;
+      }
+    } catch {
+      console.warn("Unable to parse Expo host URI:", hostUri);
     }
   }
 

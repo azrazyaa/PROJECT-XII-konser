@@ -141,10 +141,17 @@ export async function syncEventTicketCategories(db, eventId, stageLayout) {
   // Ambil data kategori tiket saat ini
   const [existingCategories] = await db.query(
     `SELECT tc.id, tc.name, tc.price, tc.quota, tc.is_locked,
-            COALESCE(SUM(od.qty), 0) AS sold
+            COALESCE(SUM(
+              CASE
+                WHEN o.status = 'paid'
+                  OR (o.status = 'pending' AND o.expired_at > NOW())
+                THEN od.qty
+                ELSE 0
+              END
+            ), 0) AS sold
      FROM ticket_categories tc
      LEFT JOIN order_details od ON tc.id = od.ticket_category_id
-     LEFT JOIN orders o ON od.order_id = o.id AND o.status IN ('paid', 'pending')
+     LEFT JOIN orders o ON od.order_id = o.id
      WHERE tc.event_id = ?
      GROUP BY tc.id`,
     [eventId]
@@ -184,4 +191,3 @@ export async function syncEventTicketCategories(db, eventId, stageLayout) {
 
   return { created, removed };
 }
-
